@@ -19,28 +19,29 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="导语：CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。 容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆的术语，都和容器">
+    <meta name="description" content="nishizhu  CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。  容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆">
 <meta property="og:type" content="article">
 <meta property="og:title" content="从kubernetes中容器生态窥探设计模式的哲学">
-<meta property="og:url" content="http://xiaobaidemu.github.io/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/index.html">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/index.html">
 <meta property="og:site_name" content="xiaobaidemu">
-<meta property="og:description" content="导语：CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。 容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆的术语，都和容器">
+<meta property="og:description" content="nishizhu  CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。  容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆">
 <meta property="og:locale">
-<meta property="og:image" content="https://km.woa.com/asset/87d9256fa07c450dbbc1786a284be7c1?height=563&width=1214">
-<meta property="og:image" content="https://km.woa.com/asset/8fc64d212ee845d18709f2faca2a1964?height=668&width=1546">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/k8s_structure.jpg">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/cri_oci.jpg">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/runtime.jpg">
 <meta property="article:published_time" content="2023-10-17T07:07:35.000Z">
-<meta property="article:modified_time" content="2023-10-17T07:18:47.698Z">
+<meta property="article:modified_time" content="2023-10-17T08:37:28.652Z">
 <meta property="article:author" content="xiaobaidemu">
 <meta property="article:tag" content="kubernetes">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://km.woa.com/asset/87d9256fa07c450dbbc1786a284be7c1?height=563&width=1214">
+<meta name="twitter:image" content="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/k8s_structure.jpg">
 
 
-<link rel="canonical" href="http://xiaobaidemu.github.io/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/","path":"2023/从kubernetes中容器生态窥探设计模式的哲学/","title":"从kubernetes中容器生态窥探设计模式的哲学"}</script>
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/","path":"从kubernetes中容器生态窥探设计模式的哲学/","title":"从kubernetes中容器生态窥探设计模式的哲学"}</script>
 
 <script class="next-config" data-name="calendar" type="application/json">""</script>
 <title>从kubernetes中容器生态窥探设计模式的哲学 | xiaobaidemu</title>
@@ -109,7 +110,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E-Docker-%E5%AE%B9%E5%99%A8-%E5%BC%80%E5%A7%8B"><span class="nav-number">1.</span> <span class="nav-text">从 Docker !&#x3D; 容器 开始</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E-%E6%8E%A5%E5%8F%A3%E4%B8%8E%E8%A7%84%E8%8C%83-%E5%88%B0-%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">从 接口与规范 到 具体实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A7%E5%A6%99%E7%9A%84%E6%A1%A5%E6%8E%A5%E6%A8%A1%E5%BC%8F"><span class="nav-number">3.</span> <span class="nav-text">巧妙的桥接模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-number">4.</span> <span class="nav-text">附录</span></a></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E-Docker-%E5%AE%B9%E5%99%A8-%E5%BC%80%E5%A7%8B"><span class="nav-number">1.</span> <span class="nav-text">从 Docker !&#x3D; 容器 开始</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E-%E6%8E%A5%E5%8F%A3%E4%B8%8E%E8%A7%84%E8%8C%83-%E5%88%B0-%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">从 接口与规范 到 具体实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CRI%EF%BC%9A-%E6%9C%AC%E8%B4%A8%E5%B0%B1%E6%98%AF%E4%B8%80%E4%B8%AAprotobuf%E5%AE%9A%E4%B9%89%E7%9A%84rpc%E6%8E%A5%E5%8F%A3"><span class="nav-number">2.1.</span> <span class="nav-text">CRI： 本质就是一个protobuf定义的rpc接口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%80%E6%94%BE%E5%AE%B9%E5%99%A8%E6%A0%87%E5%87%86%E5%8F%AA%E6%98%AF%E4%B8%80%E4%B8%AA%E8%A7%84%E5%AE%9A"><span class="nav-number">2.2.</span> <span class="nav-text">开放容器标准只是一个规定</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A7%E5%A6%99%E7%9A%84%E6%A1%A5%E6%8E%A5%E6%A8%A1%E5%BC%8F"><span class="nav-number">3.</span> <span class="nav-text">巧妙的桥接模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-number">4.</span> <span class="nav-text">附录</span></a></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -158,7 +159,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -188,7 +189,7 @@
       <span class="post-meta-item-text">Posted on</span>
       
 
-      <time title="Created: 2023-10-17 15:07:35 / Modified: 15:18:47" itemprop="dateCreated datePublished" datetime="2023-10-17T15:07:35+08:00">2023-10-17</time>
+      <time title="Created: 2023-10-17 15:07:35 / Modified: 16:37:28" itemprop="dateCreated datePublished" datetime="2023-10-17T15:07:35+08:00">2023-10-17</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -209,24 +210,26 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><p>导语：CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
+    <div class="post-body" itemprop="articleBody"><p>nishizhu</p>
+<blockquote>
+<p>CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
+</blockquote>
 <p>容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆的术语，都和容器生态的大公司之间的相互博弈的结果息息相关。而正是这些大公司博弈后制定的标准，使得kubernetes生态系统在不同厂商甚至操作系统之间可以更具灵活性，减少对单个公司项目的依赖。</p>
-<h2 id="从-Docker-容器-开始"><a href="#从-Docker-容器-开始" class="headerlink" title="从 Docker !&#x3D; 容器 开始"></a>从 Docker !&#x3D; 容器 开始</h2><p>容器本质上一种轻量级的虚拟化技术，通俗的讲提供应用程序一个被隔离的可运行的环境，并且这个环境可以方便的移植部署到其他地方，那么既然是技术，那么做到上述的要求的实现可以是多种多样的，不同的厂商公司可以按照他们的理解去实现这套虚拟化技术，也就出现后文所说的Kata容器&#x2F;gVisor等。而Docker可以认为是包含了容器的一种实现技术（runc），容器镜像，以及一切运行应用程序所需要的“配套设施”，它是对于应用开发的用户来说，体验友好的配套方案和工具集合。<p><br>然后，随着kubernetes的蓬勃发展，越来越多的公司开始使用kubernetes来管理集群和应用，这也导致不同公司希望根据自己理解和需求使用不同的容器技术来运行应用。换句话说kubernetes和容器底层实现是相互解耦的，那么想要做到这两者的解耦，入手就是从制定接口或者规范开始。</p>
-<h2 id="从-接口与规范-到-具体实现"><a href="#从-接口与规范-到-具体实现" class="headerlink" title="从 接口与规范 到 具体实现"></a>从 接口与规范 到 具体实现</h2><p>简单了解kubernetes可以知道，创建一个pod本质上就是通过RESTful api请求api-server，然后kubernetes根据控制层（control plane）来决定此pod如何编排，并最终将创建的请求移交给集群中的某一台node上的kubelet，也就是说从kubelet开始创建真实的容器。<br><img src="https://km.woa.com/asset/87d9256fa07c450dbbc1786a284be7c1?height=563&width=1214" alt="image"></p>
+<h2 id="从-Docker-容器-开始"><a href="#从-Docker-容器-开始" class="headerlink" title="从 Docker !&#x3D; 容器 开始"></a>从 Docker !&#x3D; 容器 开始</h2><p>容器本质上一种轻量级的虚拟化技术，通俗的讲提供应用程序一个被隔离的可运行的环境，并且这个环境可以方便的移植部署到其他地方，那么既然是技术，那么做到上述的要求的实现可以是多种多样的，不同的厂商公司可以按照他们的理解去实现这套虚拟化技术，也就出现后文所说的Kata容器&#x2F;gVisor等。而Docker可以认为是包含了容器的一种实现技术（runc），容器镜像，以及一切运行应用程序所需要的“配套设施”，它是对于应用开发的用户来说，体验友好的配套方案和工具集合。<br>然后，随着kubernetes的蓬勃发展，越来越多的公司开始使用kubernetes来管理集群和应用，这也导致不同公司希望根据自己理解和需求使用不同的容器技术来运行应用。换句话说kubernetes和容器底层实现是相互解耦的，那么想要做到这两者的解耦，入手就是从制定接口或者规范开始。</p>
+<h2 id="从-接口与规范-到-具体实现"><a href="#从-接口与规范-到-具体实现" class="headerlink" title="从 接口与规范 到 具体实现"></a>从 接口与规范 到 具体实现</h2><p>简单了解kubernetes可以知道，创建一个pod本质上就是通过RESTful api请求api-server，然后kubernetes根据控制层（control plane）来决定此pod如何编排，并最终将创建的请求移交给集群中的某一台node上的kubelet，也就是说从kubelet开始创建真实的容器。</p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/k8s_structure.jpg" alt="图1"></p>
 <center>图1</center>
-从kubelet开始，请求会先经过CRI（Container Runtime Interface）---- High Level Runtime 传递下去，然后再经过OCI （Open Container Initiative）规范实现的 ---- Low Level Runtime 创建和启动一个容器。**似乎**整个流程就是**kubelet->CRI->OCI->container**，但是这些运行时作用和本质到底是什么，为什么要这样设计，我们围绕下面这张图来阐述。
- <div align=center>![image](https://km.woa.com/asset/32e23f380b4a4c939713e28bb2c71931?height=387&width=479)
-  <center>图2</center>
-### CRI： 本质就是一个protobuf定义的rpc接口
-CRI 定义在kubernetes项目中kubelet下（kubelet/apis/cri/runtime/v1alpha2/api.proto）这些接口包括了两个Service, 一个是专门用于管理容器的接口集合，包括create/stop/start/remove/list等操作，而另一个专门负责镜像管理接口集合，包括pull/remove/list等操作。<p>
-既然定义了rpc接口，肯定会有client端和server端，所以从kubernetes的角度看，CRI的client就集成在kubelet内，而server端就是基于CRI定义的操作集合实现的各类所谓的High Level Runtime, 换句话就是从上游kubelet拿到gRPC请求，然后根据请求向下执行接口声明的众多操作，其中一些操作例如镜像管理，当前的High Level Runtime可以处理完成，而涉及到运行真实的容器则需要将请求转交给下面的Low Level Runtime，也就对应下文说的OCI的实现。<p>
-既然定义了CRI这个接口，**那么实现这个接口的服务端也可以是不一样的**。因此也就有了containerd和CRI-O两种实现。containerd来自于Docker, 并且目前通过一种CRI plugin的方式使其与CRI接口兼容。类似一个rpc服务端，是一个守护进程，等待上游的rpc请求，收到请求后可以**推送/拉取镜像，管理存储网络，并且创建/运行/监控容器的运行**等功能。与containerd相对应的CRI-O是另一个由Ret-hat发起的，更加精简的实现方案。正如上文所说，无论CRI接口怎么实现，其中都要有能力创建运行的真正的容器，即会将请求移交到更低级别运行时处理，例如操作系统这一层应该如何创建，使用的镜像应该符合什么标准。这些都需要有一个规范来约束，从而使各个厂商根据不同的需求实现的容器都可以兼容CRI实现层。这个时候OCI这个概念就应运而生了。
-### 开放容器标准只是一个规定
-OCI规定了容器应该如何运行，包括哪些状态，生命周期的管理标准，以及容器镜像标准大概是什么，具体细则可以[参考此链接](https://github.com/opencontainers/runtime-spec/blob/main/spec.md)。既然OCI是一个标准，那么肯定也有对应这个标准的众多实现，其中runc就是第一个符合OCI各项规范和标准的参考实现（reference implementation）。换言之，runc会用Linux内核系统调用（cgroup/namespace）创建操作容器。当然除了runc是一个实现外，现在比较知名的kata-container runtime以及google的gVisor也是OCI规范的一个实现，区别点就在后两者是强隔离容器，即容器运行在一个类似轻量级的虚拟机内，一个容器属于一个轻量级虚拟机，对于多租户平台上的用户有着更高的安全性（无法从一个容器内部攻击宿主机或者其他租户容器）。
+
+<p>从kubelet开始，请求会先经过CRI（Container Runtime Interface）—- High Level Runtime 传递下去，然后再经过OCI （Open Container Initiative）规范实现的 —- Low Level Runtime 创建和启动一个容器。<strong>似乎</strong>整个流程就是<strong>kubelet-&gt;CRI-&gt;OCI-&gt;container</strong>，但是这些运行时作用和本质到底是什么，为什么要这样设计，我们围绕下面这张图来阐述。</p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/cri_oci.jpg" alt="图2"></p>
+<center>图2</center>
+
+<h3 id="CRI：-本质就是一个protobuf定义的rpc接口"><a href="#CRI：-本质就是一个protobuf定义的rpc接口" class="headerlink" title="CRI： 本质就是一个protobuf定义的rpc接口"></a>CRI： 本质就是一个protobuf定义的rpc接口</h3><p>CRI 定义在kubernetes项目中kubelet下（kubelet&#x2F;apis&#x2F;cri&#x2F;runtime&#x2F;v1alpha2&#x2F;api.proto）这些接口包括了两个Service, 一个是专门用于管理容器的接口集合，包括create&#x2F;stop&#x2F;start&#x2F;remove&#x2F;list等操作，而另一个专门负责镜像管理接口集合，包括pull&#x2F;remove&#x2F;list等操作。<p><br>既然定义了rpc接口，肯定会有client端和server端，所以从kubernetes的角度看，CRI的client就集成在kubelet内，而server端就是基于CRI定义的操作集合实现的各类所谓的High Level Runtime, 换句话就是从上游kubelet拿到gRPC请求，然后根据请求向下执行接口声明的众多操作，其中一些操作例如镜像管理，当前的High Level Runtime可以处理完成，而涉及到运行真实的容器则需要将请求转交给下面的Low Level Runtime，也就对应下文说的OCI的实现。<p><br>既然定义了CRI这个接口，<strong>那么实现这个接口的服务端也可以是不一样的</strong>。因此也就有了containerd和CRI-O两种实现。containerd来自于Docker, 并且目前通过一种CRI plugin的方式使其与CRI接口兼容。类似一个rpc服务端，是一个守护进程，等待上游的rpc请求，收到请求后可以<strong>推送&#x2F;拉取镜像，管理存储网络，并且创建&#x2F;运行&#x2F;监控容器的运行</strong>等功能。与containerd相对应的CRI-O是另一个由Ret-hat发起的，更加精简的实现方案。正如上文所说，无论CRI接口怎么实现，其中都要有能力创建运行的真正的容器，即会将请求移交到更低级别运行时处理，例如操作系统这一层应该如何创建，使用的镜像应该符合什么标准。这些都需要有一个规范来约束，从而使各个厂商根据不同的需求实现的容器都可以兼容CRI实现层。这个时候OCI这个概念就应运而生了。</p>
+<h3 id="开放容器标准只是一个规定"><a href="#开放容器标准只是一个规定" class="headerlink" title="开放容器标准只是一个规定"></a>开放容器标准只是一个规定</h3><p>OCI规定了容器应该如何运行，包括哪些状态，生命周期的管理标准，以及容器镜像标准大概是什么，具体细则可以<a target="_blank" rel="noopener" href="https://github.com/opencontainers/runtime-spec/blob/main/spec.md">参考此链接</a>。既然OCI是一个标准，那么肯定也有对应这个标准的众多实现，其中runc就是第一个符合OCI各项规范和标准的参考实现（reference implementation）。换言之，runc会用Linux内核系统调用（cgroup&#x2F;namespace）创建操作容器。当然除了runc是一个实现外，现在比较知名的kata-container runtime以及google的gVisor也是OCI规范的一个实现，区别点就在后两者是强隔离容器，即容器运行在一个类似轻量级的虚拟机内，一个容器属于一个轻量级虚拟机，对于多租户平台上的用户有着更高的安全性（无法从一个容器内部攻击宿主机或者其他租户容器）。</p>
 <p>
 让我们再回到CRI，docker本身是先于kubernetes出现的，在最早没有CRI的时候，docker可以认为是被固定到kubernetes上的，那么固定的方法就是通过一个dockershim的组件，来桥接kubelet和docker之间的交互。然而kubernetes从v1.20开始正式放弃对Docker的支持（当然放弃支持并不是不能在kubernetes集群中使用docker集成的运行时，而是指不建议将docker作为底层运行时，即不使用dockershim和docker daemon这套集成运行时，但是仍然可以使用OCI标准中规定符合镜像要求的docker镜像），也从侧面看出CRI的出现，让kubernetes可以兼容不同的High Level Runtime，让不同的厂商分得一杯羹。下图中分别描述了经典kubelet与Docker的集成方案和现在选择containerd实现的CRI运行时配合某一oci实现的运行时的集成方案的区别，对于后者可以将containerd替换成上文说的CRI-O，并且oci runtime也可以任意选择不同厂商的容器实现方案。
 
-<p><img src="https://km.woa.com/asset/8fc64d212ee845d18709f2faca2a1964?height=668&width=1546" alt="image"><br> <center>图3</center></p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/runtime.jpg" alt="图3"><br> <center>图3</center></p>
 <h2 id="巧妙的桥接模式"><a href="#巧妙的桥接模式" class="headerlink" title="巧妙的桥接模式"></a>巧妙的桥接模式</h2><p>仔细的在查看一下图2，是不是很像设计模式中的”桥接模式”。下面是桥接模式的一个定义。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- 桥接是一种结构型设计模式，可将业务逻辑或一个大类拆分为不同的层次结构， 从而能独立地进行开发。</span><br><span class="line">- 层次结构中的第一层 （通常称为抽象部分） 将包含对第二层 （实现部分） 对象的引用。</span><br><span class="line">- 抽象部分将能将一些 （有时是绝大部分） 对自己的调用委派给实现部分的对象。 所有的实现部分都有一个通用接口， 因此它们能在抽象部分内部相互替换。</span><br></pre></td></tr></table></figure>
 
@@ -264,11 +267,11 @@ OCI规定了容器应该如何运行，包括哪些状态，生命周期的管�
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/2023/%E4%B8%80%E5%88%87%E4%BB%8EDEBUG%E8%AF%B4%E8%B5%B7%EF%BC%88%E7%AC%AC%E4%B8%80%E7%AF%87%EF%BC%9A%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83%EF%BC%89/" rel="prev" title="一切从DEBUG说起（第一篇：建立k8s的DEBUG环境）">
-                  <i class="fa fa-angle-left"></i> 一切从DEBUG说起（第一篇：建立k8s的DEBUG环境）
-                </a>
             </div>
             <div class="post-nav-item">
+                <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" rel="next" title="从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境">
+                  从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境 <i class="fa fa-angle-right"></i>
+                </a>
             </div>
           </div>
     </footer>

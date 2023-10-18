@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  第一步得先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  第一步得先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以">
+<meta property="og:locale">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug1.png">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug2.png">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug3.png">
+<meta property="article:published_time" content="2023-10-18T03:45:08.000Z">
+<meta property="article:modified_time" content="2023-10-18T06:44:28.694Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/","path":"手把手一起DEBUG-Kubernetes-第一篇-建立k8s的DEBUG环境/","title":"手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境) | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%E5%BE%97%E5%85%88%E6%9C%89%E4%B8%80%E4%B8%AA%E8%87%AA%E5%B7%B1%E7%9A%84k8s%E9%9B%86%E7%BE%A4"><span class="nav-number">1.</span> <span class="nav-text">第一步得先有一个自己的k8s集群</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8kubeadm%E6%90%AD%E5%BB%BAk8s%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E4%BA%9B%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.1.</span> <span class="nav-text">使用kubeadm搭建k8s集群的一些注意事项</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8VSCode-Debug-k8s%E7%BB%84%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">使用VSCode Debug k8s组件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver-%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">本地debug编译好的二进制apiserver （推荐）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E7%BC%96%E8%AF%91apiserver"><span class="nav-number">2.1.1.</span> <span class="nav-text">1. 编译apiserver</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E9%85%8D%E7%BD%AEvscode-launch%E6%96%87%E4%BB%B6"><span class="nav-number">2.1.2.</span> <span class="nav-text">2. 配置vscode launch文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%90%AF%E5%8A%A8%E8%B0%83%E8%AF%95"><span class="nav-number">2.1.3.</span> <span class="nav-text">3. 启动调试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9C%E7%A8%8Bdebug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver"><span class="nav-number">2.2.</span> <span class="nav-text">远程debug编译好的二进制apiserver</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%EF%BC%8C%E6%9C%AA%E6%8F%90%E5%89%8D%E7%BC%96%E8%AF%91%E7%9A%84apiserver%EF%BC%88%E4%B8%8D%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">本地debug，未提前编译的apiserver（不推荐）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vscode-debug-kube-scheduler%E9%85%8D%E7%BD%AE"><span class="nav-number">2.4.</span> <span class="nav-text">vscode debug kube-scheduler配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-number">3.</span> <span class="nav-text">附录</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E4%BD%BF%E7%94%A8service-account%E5%88%9B%E5%BB%BAkubeconfig%E7%99%BB%E5%BD%95dashboard"><span class="nav-number">3.1.</span> <span class="nav-text">关于使用service account创建kubeconfig登录dashboard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">3.2.</span> <span class="nav-text">参考资料</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境) | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+      
+
+      <time title="Created: 2023-10-18 11:45:08 / Modified: 14:44:28" itemprop="dateCreated datePublished" datetime="2023-10-18T11:45:08+08:00">2023-10-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。</p>
+</blockquote>
+<h1 id="第一步得先有一个自己的k8s集群"><a href="#第一步得先有一个自己的k8s集群" class="headerlink" title="第一步得先有一个自己的k8s集群"></a>第一步得先有一个自己的k8s集群</h1><p>这里推荐使用<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/">kubeadm</a>方式完成kubernetes集群的搭建，之所以不采用minikube，主要有以下几个原因：</p>
+<ol>
+<li>主要是使用kubeadm创建的过程中也是一个复习整个kubernetes集群组件的过程。</li>
+<li>虽然kubeadm在创建集群过程中，都能比较容易得创建集群，但是相对于minikube这种开箱即用的来说，还是有一定繁琐步骤需要自行处理。例如需要选择不同的底层组件（例如CRI和OCI的选择，可以参考<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6.html">从kubernetes中容器生态窥探设计模式的哲学</a>这篇文章）甚至如果有多台机器，可以将在多台机器部署k8s node,在后续学习的时候，可以更真实的理解例如调度的逻辑。</li>
+<li>minikube更多的可以帮助一个从没有接触过k8s的人，让其能够通过minikube上手使用k8s，来学习了解k8s的理念。</li>
+<li>因为后续我们会通过将原本的k8s集群中的某一个组件停止，替换为我们自己通过源码的编译的组件，进而对k8s的这个组件进行debug，来学习里面的一些源码，因此知道这些组件的停止启动，部署逻辑是很有必要的，所以kubeadm在这方便是更好的工具。</li>
+</ol>
+<h2 id="使用kubeadm搭建k8s集群的一些注意事项"><a href="#使用kubeadm搭建k8s集群的一些注意事项" class="headerlink" title="使用kubeadm搭建k8s集群的一些注意事项"></a>使用kubeadm搭建k8s集群的一些注意事项</h2><p>kubeadm的教程已经非常详细了，所以这里我不会再将原文赘述一遍。但是在创建的集群的时候也会遇到很多坑，这里我主要说明一下我遇到的几个问题，帮助读者可以避免过多的耗费时间在这些异常问题上。本文及后续所有相关文章均以k8s v1.25.3版本为例创建集群。</p>
+<ol>
+<li>这里我使用了不太常用的cri-dockerd作为容器运行时（更推荐使用containerd&#x2F;cri-o作为容器运行时），<a target="_blank" rel="noopener" href="https://github.com/Mirantis/cri-dockerd">GitHub - Mirantis&#x2F;cri-dockerd: dockerd as a compliant Container Runtime Interface for Kubernetes</a> 需要注意的时候<font color=red>必须使用sudo 或者 以root用户进行安装</font>。并且安装完成并且使用systemctl命令启动后查看是否可以正常运行.</li>
+<li>务必保证&#x2F;etc&#x2F;crictl.yaml没有设置任何image-endpoint和runtime-endpoint配置（如果有请删除），否则kubeadm中的cri-socket选项将被覆盖</li>
+<li>在安装kubeadm&#x2F;kubelet&#x2F;kubectl的时候，需要指定版本，否则会默认安装最新版本，这里我安装的是1.25.3版本</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># Installing kubeadm | Kubernetes</span><br><span class="line">sudo yum install -y kubelet-1.25.3 kubeadm-1.25.3 kubectl-1.25.3 --disableexcludes=kubernetes</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>这里我列出我的kubeadm init参数，这些参数有一些会和后面debug时启动的参数有关</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 使用cri-dockerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/cri-dockerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 使用containerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/containerd/containerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 重置kubeadm init生成的配置</span><br><span class="line">sudo kubeadm reset --cri-socket unix:///var/run/xxxx</span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li>如果在使用国内阿里云或者腾讯云，除了需要kubeadm 参数中使用–image-repository参数设置国内镜像仓库外。如果使用containerd的话，需要手动先生成containerd相关配置文件<a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/blob/main/docs/getting-started.md">containerd&#x2F;getting-started.md at main · containerd&#x2F;containerd · GitHub</a>，并且修改对应的配置信息，如下</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># containerd uses a configuration file located in /etc/containerd/config.toml for specifying daemon level options. 默认containerd不会有这个文件，需要手动执行此命令生成</span><br><span class="line">containerd config default &gt; /etc/containerd/config.toml</span><br><span class="line"># 注意需要修改 sandbox_image配置，因为这个镜像是创建pod时，最先使用pause镜像启动进程，而后在启动真实容器。所以在kubeadm init过程中可能出现k8s控制面组件启动不起来，很大可能是由于这个镜像由于网络问题无法下载下来，需要修改为国内镜像。</span><br><span class="line">sandbox_image = &quot;registry.k8s.io/pause:3.6&quot; </span><br><span class="line">sandbox_image = &quot;registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6&quot;</span><br></pre></td></tr></table></figure>
+
+<ol start="6">
+<li>安装完成后你仍然需要选择一个cni插件进行安装，可以参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/cluster-administration/addons/">Installing Addons | Kubernetes</a></li>
+<li>如果你只有一台机器用来调试，默认情况k8s master节点是不能创建非control-plane的pod的（因为标记了相应的污点，仅允许在此节点上调度关键工作负载），所以需要移除</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl taint node &lt;you&gt; node-role.kubernetes.io/control-plane-</span><br></pre></td></tr></table></figure>
+
+<ol start="8">
+<li>在搭建完成后，可以使用kubernates dashboard安装可视化的UI，具体可以参考<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/tree/master/docs/user/accessing-dashboard">dashboard&#x2F;docs&#x2F;user&#x2F;accessing-dashboard at master · kubernetes&#x2F;dashboard · GitHub</a>并且使用Service的NodePort模式（否则如果使用kubectl proxy方式访问会出现”检测到不安全的访问。无法登陆”提示），使用<node_ip>:<nodePort>方式访问dashboard<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png" alt="dashboard"></li>
+<li>登陆kubernetes dashboard建议使用此方法：创建service account并且和cluster-admin这个默认的clusterrole绑定，然后在控制节点执行kubectl -n kubernetes-dashboard create token &lt;service account名字&gt; 创建bearer token登录。<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md">dashboard&#x2F;creating-sample-user.md at master · kubernetes&#x2F;dashboard · GitHub</a></li>
+</ol>
+<h1 id="使用VSCode-Debug-k8s组件"><a href="#使用VSCode-Debug-k8s组件" class="headerlink" title="使用VSCode Debug k8s组件"></a>使用VSCode Debug k8s组件</h1><p>这里我们先以k8s的apiserver为例，进行说明</p>
+<p>工具：</p>
+<ol>
+<li>vscode安装插件<a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack">vscode Remote Development扩展套件</a></li>
+<li>安装<a target="_blank" rel="noopener" href="https://github.com/go-delve/delve">delve golang语言debugger</a></li>
+</ol>
+<p><font color=red>调试所用的源文件版本：kubernetes版本 v1.25.3 </font></p>
+<h2 id="本地debug编译好的二进制apiserver-（推荐）"><a href="#本地debug编译好的二进制apiserver-（推荐）" class="headerlink" title="本地debug编译好的二进制apiserver （推荐）"></a>本地debug编译好的二进制apiserver （推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，编译好的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试.</p>
+<h3 id="1-编译apiserver"><a href="#1-编译apiserver" class="headerlink" title="1. 编译apiserver"></a>1. 编译apiserver</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make all WHAT=cmd/kube-apiserver DBG=1</span><br></pre></td></tr></table></figure>
+
+<p>更多编译命令可以直接查阅项目根目录下的Makefile</p>
+<h3 id="2-配置vscode-launch文件"><a href="#2-配置vscode-launch文件" class="headerlink" title="2. 配置vscode launch文件"></a>2. 配置vscode launch文件</h3><p>下面是我按照第一节方法创建的k8s集群的参数，设置的调试参数，本质上就是apiserver的启动参数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch local executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;, </span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;--advertise-address=172.31.124.8&quot;,</span><br><span class="line">                &quot;--allow-privileged=true&quot;,</span><br><span class="line">                &quot;--authorization-mode=Node,RBAC&quot;,</span><br><span class="line">                &quot;--client-ca-file=/etc/kubernetes/pki/ca.crt&quot;,</span><br><span class="line">                &quot;--enable-admission-plugins=ServiceAccount&quot;,</span><br><span class="line">                &quot;--enable-bootstrap-token-auth=true&quot;,</span><br><span class="line">                &quot;--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt&quot;,</span><br><span class="line">                &quot;--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt&quot;,</span><br><span class="line">                &quot;--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key&quot;,</span><br><span class="line">                &quot;--etcd-servers=https://127.0.0.1:2379&quot;,</span><br><span class="line">                &quot;--kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt&quot;,</span><br><span class="line">                &quot;--kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key&quot;,</span><br><span class="line">                &quot;--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname&quot;,</span><br><span class="line">                &quot;--proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt&quot;,</span><br><span class="line">                &quot;--proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key&quot;,</span><br><span class="line">                &quot;--requestheader-allowed-names=front-proxy-client&quot;,</span><br><span class="line">                &quot;--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt&quot;,</span><br><span class="line">                &quot;--requestheader-extra-headers-prefix=X-Remote-Extra-&quot;,</span><br><span class="line">                &quot;--requestheader-group-headers=X-Remote-Group&quot;,</span><br><span class="line">                &quot;--requestheader-username-headers=X-Remote-User&quot;,</span><br><span class="line">                &quot;--secure-port=6443&quot;,</span><br><span class="line">                &quot;--service-account-issuer=https://kubernetes.default.svc.cluster.local&quot;,</span><br><span class="line">                &quot;--service-account-key-file=/etc/kubernetes/pki/sa.pub&quot;,</span><br><span class="line">                &quot;--service-account-signing-key-file=/etc/kubernetes/pki/sa.key&quot;,</span><br><span class="line">                &quot;--service-cluster-ip-range=10.96.0.0/12&quot;,</span><br><span class="line">                &quot;--tls-cert-file=/etc/kubernetes/pki/apiserver.crt&quot;,</span><br><span class="line">                &quot;--tls-private-key-file=/etc/kubernetes/pki/apiserver.key&quot;,</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;上述配置说明：</p>
+<ul>
+<li>${workspaceFolder} 为当前k8s所有的workspace目录，_output&#x2F;bin为在workspace目录下执行make后，二进制文件所在目录。</li>
+<li><font color=red>substitutePath配置非常重要</font>，用于将vscode调试用的代码路径映射到编译所使用的代码路径，这里由于使用k8s在make期间会将代码拷贝到_output&#x2F;local&#x2F;go&#x2F;src&#x2F;k8s.io&#x2F;kubernetes下，调试代码路径和编译代码路径不一致，所以需要进行映射。</li>
+<li>args配置项为启动apiserver的参数，参数直接来自于上一节使用kubeadm搭建的k8s后，生成的对应启动apiserver pod的yaml文件,一般会在&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml中, 复制command参数改写到args中即可。</li>
+</ul>
+<h3 id="3-启动调试"><a href="#3-启动调试" class="headerlink" title="3. 启动调试"></a>3. 启动调试</h3><p>注：由于kube-apiserver是以static pod类型启动的（在指定的节点上由kubelet 守护进程直接管理，不需要API 服务器监管）,所以只要kubelet在当前node启动了，就会默认检测&#x2F;etc&#x2F;kubernetes&#x2F;manifests下存在的pod拉起，所以要将&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml从&#x2F;etc&#x2F;kubernetes&#x2F;manifests移除。<br>选中需要的断点即可启动二进制开始调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug1.png" alt="debug1"></p>
+<h2 id="远程debug编译好的二进制apiserver"><a href="#远程debug编译好的二进制apiserver" class="headerlink" title="远程debug编译好的二进制apiserver"></a>远程debug编译好的二进制apiserver</h2><p>注：这里的本地指的是<font color=red>代码在本地的机器中，编译好的二进制文件在远程服务器</font>。使用本地vscode debug工具连接远端dlv工具启动好的debugger服务器进行调试。</p>
+<ol>
+<li>编译方法和上文方法相同</li>
+<li>配置vscode launch文件</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch remote executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;debugAdapter&quot;: &quot;dlv-dap&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;port&quot;: 12345,</span><br><span class="line">            &quot;host&quot;: &quot;127.0.0.1&quot;, // can skip for localhost</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">               // 参数和上文相同</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>启动远程服务器上的delve服务器，这里用一台机器模拟，所以在本地启动</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dlv dap --listen=127.0.0.1:12345 </span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>启动调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug2.png" alt="debug2"></li>
+</ol>
+<h2 id="本地debug，未提前编译的apiserver（不推荐）"><a href="#本地debug，未提前编译的apiserver（不推荐）" class="headerlink" title="本地debug，未提前编译的apiserver（不推荐）"></a>本地debug，未提前编译的apiserver（不推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，vscode的debug插件启动后才编译的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试。</p>
+<ol>
+<li>配置tasks.json文件（主要用于编译设置禁止内联和优化）</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;2.0.0&quot;,</span><br><span class="line">    &quot;tasks&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;label&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;shell&quot;,</span><br><span class="line">            &quot;command&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;build&quot;,</span><br><span class="line">                &quot;-gcflags=all=-N -l&quot;, // 禁止编译优化</span><br><span class="line">                &quot;-o&quot;,</span><br><span class="line">                &quot;$&#123;workspaceFolder&#125;/__debug_bin&quot; // 编译后二进制的目录</span><br><span class="line">            ],</span><br><span class="line">            &quot;options&quot;: &#123;</span><br><span class="line">                &quot;cwd&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot; // 编译所在的目录</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>配置vscode launch.json文件。更多配置可以参考：<a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md#debug-a-package-test-as-root">vscode-go&#x2F;debugging官方文档</a></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch source api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;auto&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot;,</span><br><span class="line">            &quot;preLaunchTask&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                // 参数上同</span><br><span class="line">            ]</span><br><span class="line">        &#125;    </span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>启动调试，此过程由于在启动debug之后，才会执行代码编译，所以会相对较慢<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug3.png" alt="debug3"></li>
+</ol>
+<h2 id="vscode-debug-kube-scheduler配置"><a href="#vscode-debug-kube-scheduler配置" class="headerlink" title="vscode debug kube-scheduler配置"></a>vscode debug kube-scheduler配置</h2><p>kube-scheduler调度器的debug配置和kube-apiserver基本一致，这里直接列出一个默认的launch.json的配置文件(这里的scheduler启动参数使用默认kubeadm搭建的集群时的参数)，手把手debug kube-scheduler，以及深入顺理调度逻辑，可以后续系列文章。</p>
+<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><h2 id="关于使用service-account创建kubeconfig登录dashboard"><a href="#关于使用service-account创建kubeconfig登录dashboard" class="headerlink" title="关于使用service account创建kubeconfig登录dashboard"></a>关于使用service account创建kubeconfig登录dashboard</h2><p>实验下来，目前kubernetes dashboard必须通过创建service account登录，而无法直接通过X.509证书方式登录（即用此方式配置kubeconfig登录<a target="_blank" rel="noopener" href="https://devopstales.github.io/kubernetes/k8s-user-accounts/">How to create Users in Kubernetes the right way? - devopstales</a>），下面以v1.25.3为例创建sevice account方式，详细叙述创建kubeconfig方法。（注：网上很多教程是以v1.22之前的版本为基础，所以会有区别）</p>
+<ol>
+<li>创建seviceacount</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create serviceaccount &lt;service-account-name&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>创建&#x2F;role&#x2F;rolebinding</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">kind: Role</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">rules:</span><br><span class="line">- apiGroups: [&quot;&quot;, &quot;extensions&quot;, &quot;apps&quot;]</span><br><span class="line">  resources: [&quot;*&quot;]</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">- apiGroups: [&quot;batch&quot;]</span><br><span class="line">  resources:</span><br><span class="line">  - jobs</span><br><span class="line">  - cronjobs</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">---</span><br><span class="line">kind: RoleBinding</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-binding-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">subjects:</span><br><span class="line">- kind: ServiceAccount</span><br><span class="line">  name: &lt;service-account-name&gt;</span><br><span class="line">  namespace: default </span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: Role</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line"># kubectl apply -f &lt;file.yaml&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>创建serviceaccount token，这里需要注意在v.1.24版本之前，创建完serviceaccount后就会自动创建token，而本例使用的是v1.25版本，需要手动创建。具体可以参考<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/72256006/service-account-secret-is-not-listed-how-to-fix-it">kubernetes - Service account secret is not listed. How to fix it? - Stack Overflow &#x2F; Secrets | Kubernetes</a></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Secret</span><br><span class="line">metadata:</span><br><span class="line">  name: xiaobaihesa-secret</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/service-account.name: &quot;&lt;service-account-name&gt;&quot;</span><br><span class="line">type: kubernetes.io/service-account-token</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>创建kubeconfig</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-cluster &lt;cluster-name&gt; --insecure-skip-tls-verify=true --server=https://&lt;your-k8s-domain&gt;</span><br><span class="line">TOKEN=$(kubectl describe secrets &quot;$(kubectl describe serviceaccount &lt;service-account-name&gt; | grep -i Tokens | awk &#x27;&#123;print $2&#125;&#x27;)&quot; | grep token: | awk &#x27;&#123;print $2&#125;&#x27;)</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-credentials &lt;user-name&gt; --token=$TOKEN</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-context  &lt;context-name&gt;  --cluster=&lt;cluster-name&gt; --user=xiaobaihe</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-namee config use-context &lt;context-name&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md">vscode-go&#x2F;debugging.md at master · golang&#x2F;vscode-go · GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/duyanghao/kubernetes-reading-notes/blob/master/debug/remote_debug.md">kubernetes-reading-notes&#x2F;remote_debug.md at master · duyanghao&#x2F;kubernetes-reading-notes · GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.renkeju.com/deploy/A.2.3.cluster-initialization.html">A.2.3 集群初始化 · Kubernetes Documentation</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" rel="prev" title="从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境">
+                  <i class="fa fa-angle-left"></i> 从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

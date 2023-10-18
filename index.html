@@ -149,7 +149,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -167,7 +167,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2023/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/" class="post-title-link" itemprop="url">从kubernetes中容器生态窥探设计模式的哲学</a>
+          <a href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)</a>
         </h2>
 
         <div class="post-meta-container">
@@ -179,7 +179,7 @@
       <span class="post-meta-item-text">Posted on</span>
       
 
-      <time title="Created: 2023-10-17 15:07:35 / Modified: 15:18:47" itemprop="dateCreated datePublished" datetime="2023-10-17T15:07:35+08:00">2023-10-17</time>
+      <time title="Created: 2023-10-18 11:45:08 / Modified: 14:44:28" itemprop="dateCreated datePublished" datetime="2023-10-18T11:45:08+08:00">2023-10-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -201,24 +201,365 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>导语：CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
+          <blockquote>
+<p>授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。</p>
+</blockquote>
+<h1 id="第一步得先有一个自己的k8s集群"><a href="#第一步得先有一个自己的k8s集群" class="headerlink" title="第一步得先有一个自己的k8s集群"></a>第一步得先有一个自己的k8s集群</h1><p>这里推荐使用<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/">kubeadm</a>方式完成kubernetes集群的搭建，之所以不采用minikube，主要有以下几个原因：</p>
+<ol>
+<li>主要是使用kubeadm创建的过程中也是一个复习整个kubernetes集群组件的过程。</li>
+<li>虽然kubeadm在创建集群过程中，都能比较容易得创建集群，但是相对于minikube这种开箱即用的来说，还是有一定繁琐步骤需要自行处理。例如需要选择不同的底层组件（例如CRI和OCI的选择，可以参考<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6.html">从kubernetes中容器生态窥探设计模式的哲学</a>这篇文章）甚至如果有多台机器，可以将在多台机器部署k8s node,在后续学习的时候，可以更真实的理解例如调度的逻辑。</li>
+<li>minikube更多的可以帮助一个从没有接触过k8s的人，让其能够通过minikube上手使用k8s，来学习了解k8s的理念。</li>
+<li>因为后续我们会通过将原本的k8s集群中的某一个组件停止，替换为我们自己通过源码的编译的组件，进而对k8s的这个组件进行debug，来学习里面的一些源码，因此知道这些组件的停止启动，部署逻辑是很有必要的，所以kubeadm在这方便是更好的工具。</li>
+</ol>
+<h2 id="使用kubeadm搭建k8s集群的一些注意事项"><a href="#使用kubeadm搭建k8s集群的一些注意事项" class="headerlink" title="使用kubeadm搭建k8s集群的一些注意事项"></a>使用kubeadm搭建k8s集群的一些注意事项</h2><p>kubeadm的教程已经非常详细了，所以这里我不会再将原文赘述一遍。但是在创建的集群的时候也会遇到很多坑，这里我主要说明一下我遇到的几个问题，帮助读者可以避免过多的耗费时间在这些异常问题上。本文及后续所有相关文章均以k8s v1.25.3版本为例创建集群。</p>
+<ol>
+<li>这里我使用了不太常用的cri-dockerd作为容器运行时（更推荐使用containerd&#x2F;cri-o作为容器运行时），<a target="_blank" rel="noopener" href="https://github.com/Mirantis/cri-dockerd">GitHub - Mirantis&#x2F;cri-dockerd: dockerd as a compliant Container Runtime Interface for Kubernetes</a> 需要注意的时候<font color=red>必须使用sudo 或者 以root用户进行安装</font>。并且安装完成并且使用systemctl命令启动后查看是否可以正常运行.</li>
+<li>务必保证&#x2F;etc&#x2F;crictl.yaml没有设置任何image-endpoint和runtime-endpoint配置（如果有请删除），否则kubeadm中的cri-socket选项将被覆盖</li>
+<li>在安装kubeadm&#x2F;kubelet&#x2F;kubectl的时候，需要指定版本，否则会默认安装最新版本，这里我安装的是1.25.3版本</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># Installing kubeadm | Kubernetes</span><br><span class="line">sudo yum install -y kubelet-1.25.3 kubeadm-1.25.3 kubectl-1.25.3 --disableexcludes=kubernetes</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>这里我列出我的kubeadm init参数，这些参数有一些会和后面debug时启动的参数有关</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 使用cri-dockerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/cri-dockerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 使用containerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/containerd/containerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 重置kubeadm init生成的配置</span><br><span class="line">sudo kubeadm reset --cri-socket unix:///var/run/xxxx</span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li>如果在使用国内阿里云或者腾讯云，除了需要kubeadm 参数中使用–image-repository参数设置国内镜像仓库外。如果使用containerd的话，需要手动先生成containerd相关配置文件<a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/blob/main/docs/getting-started.md">containerd&#x2F;getting-started.md at main · containerd&#x2F;containerd · GitHub</a>，并且修改对应的配置信息，如下</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># containerd uses a configuration file located in /etc/containerd/config.toml for specifying daemon level options. 默认containerd不会有这个文件，需要手动执行此命令生成</span><br><span class="line">containerd config default &gt; /etc/containerd/config.toml</span><br><span class="line"># 注意需要修改 sandbox_image配置，因为这个镜像是创建pod时，最先使用pause镜像启动进程，而后在启动真实容器。所以在kubeadm init过程中可能出现k8s控制面组件启动不起来，很大可能是由于这个镜像由于网络问题无法下载下来，需要修改为国内镜像。</span><br><span class="line">sandbox_image = &quot;registry.k8s.io/pause:3.6&quot; </span><br><span class="line">sandbox_image = &quot;registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6&quot;</span><br></pre></td></tr></table></figure>
+
+<ol start="6">
+<li>安装完成后你仍然需要选择一个cni插件进行安装，可以参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/cluster-administration/addons/">Installing Addons | Kubernetes</a></li>
+<li>如果你只有一台机器用来调试，默认情况k8s master节点是不能创建非control-plane的pod的（因为标记了相应的污点，仅允许在此节点上调度关键工作负载），所以需要移除</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl taint node &lt;you&gt; node-role.kubernetes.io/control-plane-</span><br></pre></td></tr></table></figure>
+
+<ol start="8">
+<li>在搭建完成后，可以使用kubernates dashboard安装可视化的UI，具体可以参考<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/tree/master/docs/user/accessing-dashboard">dashboard&#x2F;docs&#x2F;user&#x2F;accessing-dashboard at master · kubernetes&#x2F;dashboard · GitHub</a>并且使用Service的NodePort模式（否则如果使用kubectl proxy方式访问会出现”检测到不安全的访问。无法登陆”提示），使用<node_ip>:<nodePort>方式访问dashboard<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png" alt="dashboard"></li>
+<li>登陆kubernetes dashboard建议使用此方法：创建service account并且和cluster-admin这个默认的clusterrole绑定，然后在控制节点执行kubectl -n kubernetes-dashboard create token &lt;service account名字&gt; 创建bearer token登录。<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md">dashboard&#x2F;creating-sample-user.md at master · kubernetes&#x2F;dashboard · GitHub</a></li>
+</ol>
+<h1 id="使用VSCode-Debug-k8s组件"><a href="#使用VSCode-Debug-k8s组件" class="headerlink" title="使用VSCode Debug k8s组件"></a>使用VSCode Debug k8s组件</h1><p>这里我们先以k8s的apiserver为例，进行说明</p>
+<p>工具：</p>
+<ol>
+<li>vscode安装插件<a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack">vscode Remote Development扩展套件</a></li>
+<li>安装<a target="_blank" rel="noopener" href="https://github.com/go-delve/delve">delve golang语言debugger</a></li>
+</ol>
+<p><font color=red>调试所用的源文件版本：kubernetes版本 v1.25.3 </font></p>
+<h2 id="本地debug编译好的二进制apiserver-（推荐）"><a href="#本地debug编译好的二进制apiserver-（推荐）" class="headerlink" title="本地debug编译好的二进制apiserver （推荐）"></a>本地debug编译好的二进制apiserver （推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，编译好的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试.</p>
+<h3 id="1-编译apiserver"><a href="#1-编译apiserver" class="headerlink" title="1. 编译apiserver"></a>1. 编译apiserver</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make all WHAT=cmd/kube-apiserver DBG=1</span><br></pre></td></tr></table></figure>
+
+<p>更多编译命令可以直接查阅项目根目录下的Makefile</p>
+<h3 id="2-配置vscode-launch文件"><a href="#2-配置vscode-launch文件" class="headerlink" title="2. 配置vscode launch文件"></a>2. 配置vscode launch文件</h3><p>下面是我按照第一节方法创建的k8s集群的参数，设置的调试参数，本质上就是apiserver的启动参数。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch local executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;, </span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;--advertise-address=172.31.124.8&quot;,</span><br><span class="line">                &quot;--allow-privileged=true&quot;,</span><br><span class="line">                &quot;--authorization-mode=Node,RBAC&quot;,</span><br><span class="line">                &quot;--client-ca-file=/etc/kubernetes/pki/ca.crt&quot;,</span><br><span class="line">                &quot;--enable-admission-plugins=ServiceAccount&quot;,</span><br><span class="line">                &quot;--enable-bootstrap-token-auth=true&quot;,</span><br><span class="line">                &quot;--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt&quot;,</span><br><span class="line">                &quot;--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt&quot;,</span><br><span class="line">                &quot;--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key&quot;,</span><br><span class="line">                &quot;--etcd-servers=https://127.0.0.1:2379&quot;,</span><br><span class="line">                &quot;--kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt&quot;,</span><br><span class="line">                &quot;--kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key&quot;,</span><br><span class="line">                &quot;--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname&quot;,</span><br><span class="line">                &quot;--proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt&quot;,</span><br><span class="line">                &quot;--proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key&quot;,</span><br><span class="line">                &quot;--requestheader-allowed-names=front-proxy-client&quot;,</span><br><span class="line">                &quot;--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt&quot;,</span><br><span class="line">                &quot;--requestheader-extra-headers-prefix=X-Remote-Extra-&quot;,</span><br><span class="line">                &quot;--requestheader-group-headers=X-Remote-Group&quot;,</span><br><span class="line">                &quot;--requestheader-username-headers=X-Remote-User&quot;,</span><br><span class="line">                &quot;--secure-port=6443&quot;,</span><br><span class="line">                &quot;--service-account-issuer=https://kubernetes.default.svc.cluster.local&quot;,</span><br><span class="line">                &quot;--service-account-key-file=/etc/kubernetes/pki/sa.pub&quot;,</span><br><span class="line">                &quot;--service-account-signing-key-file=/etc/kubernetes/pki/sa.key&quot;,</span><br><span class="line">                &quot;--service-cluster-ip-range=10.96.0.0/12&quot;,</span><br><span class="line">                &quot;--tls-cert-file=/etc/kubernetes/pki/apiserver.crt&quot;,</span><br><span class="line">                &quot;--tls-private-key-file=/etc/kubernetes/pki/apiserver.key&quot;,</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;上述配置说明：</p>
+<ul>
+<li>${workspaceFolder} 为当前k8s所有的workspace目录，_output&#x2F;bin为在workspace目录下执行make后，二进制文件所在目录。</li>
+<li><font color=red>substitutePath配置非常重要</font>，用于将vscode调试用的代码路径映射到编译所使用的代码路径，这里由于使用k8s在make期间会将代码拷贝到_output&#x2F;local&#x2F;go&#x2F;src&#x2F;k8s.io&#x2F;kubernetes下，调试代码路径和编译代码路径不一致，所以需要进行映射。</li>
+<li>args配置项为启动apiserver的参数，参数直接来自于上一节使用kubeadm搭建的k8s后，生成的对应启动apiserver pod的yaml文件,一般会在&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml中, 复制command参数改写到args中即可。</li>
+</ul>
+<h3 id="3-启动调试"><a href="#3-启动调试" class="headerlink" title="3. 启动调试"></a>3. 启动调试</h3><p>注：由于kube-apiserver是以static pod类型启动的（在指定的节点上由kubelet 守护进程直接管理，不需要API 服务器监管）,所以只要kubelet在当前node启动了，就会默认检测&#x2F;etc&#x2F;kubernetes&#x2F;manifests下存在的pod拉起，所以要将&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml从&#x2F;etc&#x2F;kubernetes&#x2F;manifests移除。<br>选中需要的断点即可启动二进制开始调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug1.png" alt="debug1"></p>
+<h2 id="远程debug编译好的二进制apiserver"><a href="#远程debug编译好的二进制apiserver" class="headerlink" title="远程debug编译好的二进制apiserver"></a>远程debug编译好的二进制apiserver</h2><p>注：这里的本地指的是<font color=red>代码在本地的机器中，编译好的二进制文件在远程服务器</font>。使用本地vscode debug工具连接远端dlv工具启动好的debugger服务器进行调试。</p>
+<ol>
+<li>编译方法和上文方法相同</li>
+<li>配置vscode launch文件</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch remote executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;debugAdapter&quot;: &quot;dlv-dap&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;port&quot;: 12345,</span><br><span class="line">            &quot;host&quot;: &quot;127.0.0.1&quot;, // can skip for localhost</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">               // 参数和上文相同</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>启动远程服务器上的delve服务器，这里用一台机器模拟，所以在本地启动</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dlv dap --listen=127.0.0.1:12345 </span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>启动调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug2.png" alt="debug2"></li>
+</ol>
+<h2 id="本地debug，未提前编译的apiserver（不推荐）"><a href="#本地debug，未提前编译的apiserver（不推荐）" class="headerlink" title="本地debug，未提前编译的apiserver（不推荐）"></a>本地debug，未提前编译的apiserver（不推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，vscode的debug插件启动后才编译的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试。</p>
+<ol>
+<li>配置tasks.json文件（主要用于编译设置禁止内联和优化）</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;2.0.0&quot;,</span><br><span class="line">    &quot;tasks&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;label&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;shell&quot;,</span><br><span class="line">            &quot;command&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;build&quot;,</span><br><span class="line">                &quot;-gcflags=all=-N -l&quot;, // 禁止编译优化</span><br><span class="line">                &quot;-o&quot;,</span><br><span class="line">                &quot;$&#123;workspaceFolder&#125;/__debug_bin&quot; // 编译后二进制的目录</span><br><span class="line">            ],</span><br><span class="line">            &quot;options&quot;: &#123;</span><br><span class="line">                &quot;cwd&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot; // 编译所在的目录</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>配置vscode launch.json文件。更多配置可以参考：<a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md#debug-a-package-test-as-root">vscode-go&#x2F;debugging官方文档</a></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch source api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;auto&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot;,</span><br><span class="line">            &quot;preLaunchTask&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                // 参数上同</span><br><span class="line">            ]</span><br><span class="line">        &#125;    </span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>启动调试，此过程由于在启动debug之后，才会执行代码编译，所以会相对较慢<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug3.png" alt="debug3"></li>
+</ol>
+<h2 id="vscode-debug-kube-scheduler配置"><a href="#vscode-debug-kube-scheduler配置" class="headerlink" title="vscode debug kube-scheduler配置"></a>vscode debug kube-scheduler配置</h2><p>kube-scheduler调度器的debug配置和kube-apiserver基本一致，这里直接列出一个默认的launch.json的配置文件(这里的scheduler启动参数使用默认kubeadm搭建的集群时的参数)，手把手debug kube-scheduler，以及深入顺理调度逻辑，可以后续系列文章。</p>
+<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><h2 id="关于使用service-account创建kubeconfig登录dashboard"><a href="#关于使用service-account创建kubeconfig登录dashboard" class="headerlink" title="关于使用service account创建kubeconfig登录dashboard"></a>关于使用service account创建kubeconfig登录dashboard</h2><p>实验下来，目前kubernetes dashboard必须通过创建service account登录，而无法直接通过X.509证书方式登录（即用此方式配置kubeconfig登录<a target="_blank" rel="noopener" href="https://devopstales.github.io/kubernetes/k8s-user-accounts/">How to create Users in Kubernetes the right way? - devopstales</a>），下面以v1.25.3为例创建sevice account方式，详细叙述创建kubeconfig方法。（注：网上很多教程是以v1.22之前的版本为基础，所以会有区别）</p>
+<ol>
+<li>创建seviceacount</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create serviceaccount &lt;service-account-name&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>创建&#x2F;role&#x2F;rolebinding</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">kind: Role</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">rules:</span><br><span class="line">- apiGroups: [&quot;&quot;, &quot;extensions&quot;, &quot;apps&quot;]</span><br><span class="line">  resources: [&quot;*&quot;]</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">- apiGroups: [&quot;batch&quot;]</span><br><span class="line">  resources:</span><br><span class="line">  - jobs</span><br><span class="line">  - cronjobs</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">---</span><br><span class="line">kind: RoleBinding</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-binding-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">subjects:</span><br><span class="line">- kind: ServiceAccount</span><br><span class="line">  name: &lt;service-account-name&gt;</span><br><span class="line">  namespace: default </span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: Role</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line"># kubectl apply -f &lt;file.yaml&gt;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>创建serviceaccount token，这里需要注意在v.1.24版本之前，创建完serviceaccount后就会自动创建token，而本例使用的是v1.25版本，需要手动创建。具体可以参考<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/72256006/service-account-secret-is-not-listed-how-to-fix-it">kubernetes - Service account secret is not listed. How to fix it? - Stack Overflow &#x2F; Secrets | Kubernetes</a></li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Secret</span><br><span class="line">metadata:</span><br><span class="line">  name: xiaobaihesa-secret</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/service-account.name: &quot;&lt;service-account-name&gt;&quot;</span><br><span class="line">type: kubernetes.io/service-account-token</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li>创建kubeconfig</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-cluster &lt;cluster-name&gt; --insecure-skip-tls-verify=true --server=https://&lt;your-k8s-domain&gt;</span><br><span class="line">TOKEN=$(kubectl describe secrets &quot;$(kubectl describe serviceaccount &lt;service-account-name&gt; | grep -i Tokens | awk &#x27;&#123;print $2&#125;&#x27;)&quot; | grep token: | awk &#x27;&#123;print $2&#125;&#x27;)</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-credentials &lt;user-name&gt; --token=$TOKEN</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-context  &lt;context-name&gt;  --cluster=&lt;cluster-name&gt; --user=xiaobaihe</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-namee config use-context &lt;context-name&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md">vscode-go&#x2F;debugging.md at master · golang&#x2F;vscode-go · GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/duyanghao/kubernetes-reading-notes/blob/master/debug/remote_debug.md">kubernetes-reading-notes&#x2F;remote_debug.md at master · duyanghao&#x2F;kubernetes-reading-notes · GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.renkeju.com/deploy/A.2.3.cluster-initialization.html">A.2.3 集群初始化 · Kubernetes Documentation</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-10-17 16:51:36" itemprop="dateCreated datePublished" datetime="2023-10-17T16:51:36+08:00">2023-10-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-10-18 11:41:22" itemprop="dateModified" datetime="2023-10-18T11:41:22+08:00">2023-10-18</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <blockquote>
+<p>太长不想看全文，看这里-&gt;：1. CUDA runtime之于driver向后兼容原则，任何指定的CUDA版本都有一个与之对应的最小GPU driver版本。2.GPU的容器来说，容器中的CUDA版本受宿主机的GPU driver限制</p>
+</blockquote>
+<p>&emsp;&emsp;虽然我并不研究深度学习的算法，但是作为相关训练平台的使用者和搭建者，很多同学都会问我这些问题。“我的训练镜像是用的pytorch是cuda11的，那我的任务在如何才能分配到一台支持cuda11的GPU容器中”，”我使用训练平台1和训练平台2训练任务（因为公司内部有两个完全训练平台，这里分别用1和2表示），可是同样的镜像和代码，在平台2可以正常运行，但是平台1有的时候运行出错”。说真的每次碰到这种问题，我头很大，我不知道应该从什么地方说起，本文就是从一个新手的视角出发，并从兼容性原则和容器方向说说，这些运行时环境相关的问题是怎么决定我们的代码运行的。</p>
+<h1 id="先问自己两个问题"><a href="#先问自己两个问题" class="headerlink" title="先问自己两个问题"></a>先问自己两个问题</h1><ol>
+<li>nvidia-smi命令中返回的CUDA Version和Driver Version的关系，以及和我运行机器&#x2F;镜像中的安装的cuda库版本之间的关系？</li>
+</ol>
+<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_driver.jpg" alt="图1"></p>
+<ol start="2">
+<li>在容器(例如使用docker创建的容器)中通过GPU训练，容器镜像到底需要安装什么？镜像中需要安装GPU驱动吗？</li>
+</ol>
+<p>&emsp;&emsp;我认为很多的由于训练环境导致的训练异常，都可以从这两个问题的回答中找到原因，进而更快的定位异常点。下面我围绕这两个问题，详细的做一个回答。</p>
+<h1 id="基础概念"><a href="#基础概念" class="headerlink" title="基础概念"></a>基础概念</h1><p>&emsp;&emsp;CUDA本质上就是NVIDIA专为通用高性能并行计算设计的一套计算平台和编程模型，换句话使用GPU并行编程的规范方法，所以CUDA在软件层面包含了众多库， 那这里我们用一张图来简单阐述CUDA的各类运行时以及库的关系。</p>
+<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_runtime_structure.jpg" alt="图2"></p>
+<p>&emsp;&emsp;从最底层开始CUDA Driver（也就是常说的GPU驱动）：可以认为是最底层的操作GPU的接口，作为直接与GPU设备打交道，其编程难度很大，但是性能更好。而CUDA Runtime（也就是常说的CUDA库）：更多是面向CUDA应用开发人员，其API更加简化，可编程性更高，而基于CUDA Runtime接口再向上封装了更多的面向专用计算场景的库，例如专用于深度学习的cuDNN库等。最后，应用层可以使用CUDA Library或者直接使用CUDA Runtime API实现其功能。</p>
+<p>&emsp;&emsp;我们都知道想要使用GPU训练程序，那么必须要从nividia官方选择安装对应GPU机型的驱动文件。而官方提供的是一个叫做CUDA toolkit打包的东西，这个本质上是CUDA相关库和工具的集合，例如你如果选择<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile">runfile方式安装</a>，从官方下载下来的run文件（eg：cuda_11.0.3_450.51.06_linux.run），本身其中包括了CUDA Runtime（CUDA库），CUDA Driver （GPU驱动），还有样例代码，用户可以通过命令选择，需要安装CUDA库还是GPU驱动，还是说两者都安装。</p>
+<p>&emsp;&emsp;另外nvidia-smi本质上是直接使用CUDA driver库，所以说和系统中安装的CUDA Runtime（即CUDA版本）无关.</p>
+<h1 id="回答上方的问题"><a href="#回答上方的问题" class="headerlink" title="回答上方的问题"></a>回答上方的问题</h1><h2 id="1-归根还是CUDA-Version-Driver-Version-兼容原则"><a href="#1-归根还是CUDA-Version-Driver-Version-兼容原则" class="headerlink" title="1. 归根还是CUDA Version&#x2F;Driver Version&#x2F;兼容原则"></a>1. 归根还是CUDA Version&#x2F;Driver Version&#x2F;兼容原则</h2><p>&emsp;&emsp;本质上第一个问题，回答的就是上述驱动和CUDA运行时库之间的兼容性的问题。</p>
+<p>&emsp;&emsp;nvidia-smi中显示的CUDA Version本质上是DRIVER API COMPATIBILITY VERSION，换句话理解就是<font color=red>根据机器上当前GPU的Driver驱动版本，CUDA Version显示的是与驱动匹配的最高兼容的CUDA Runtime版本</font>（下文都我们简称CUDA Runtime为CUDA，简单理解就是你可以在机器中安装的cuda动态&#x2F;静态链接库的最高版本，CUDA driver简称为driver或驱动）。下面从源码&#x2F;二进制&#x2F;cubin三个角度具体说说兼容性，这有助于更好的排查“为什么我的训练代码在这台机器上跑不起来”的问题。</p>
+<h3 id="兼容性原则一：源码级别不兼容性"><a href="#兼容性原则一：源码级别不兼容性" class="headerlink" title="兼容性原则一：源码级别不兼容性"></a>兼容性原则一：源码级别不兼容性</h3><p>&emsp;&emsp;所谓源码不兼容很好理解，例如用户的代码是基于cuda 10.1这一特定版本对应的API库构建的，那么如果用户升级到cuda11.0的对应API库，则可能无法正常运行。需要用户根据cuda11.0对应的API文档修改代码再进行编译构建。所以我们可以看到pytorch，针对不同的cuda版本，都有对应不同的编译后的库，例如下面两个就是分别基于cuda11.1（<a target="_blank" rel="noopener" href="https://download.pytorch.org/whl/cu113/torch-1.10.1%2Bcu113-cp37-cp37m-linux_x86_64.whl">torch-1.10.1%2Bcu113-cp37-cp37m-linux_x86_64.whl</a>）和cuda11.3（<a target="_blank" rel="noopener" href="https://download.pytorch.org/whl/cu111/torch-1.10.0%2Bcu111-cp36-cp36m-linux_x86_64.whl">torch-1.10.0%2Bcu111-cp36-cp36m-linux_x86_64.whl</a>）不同的cuda版本构建的。</p>
+<h3 id="兼容原则二：后向兼容"><a href="#兼容原则二：后向兼容" class="headerlink" title="兼容原则二：后向兼容"></a>兼容原则二：后向兼容</h3><p>&emsp;&emsp;后向兼容的意思是：如果一个程序使用的CUDA版本可以在某一Driver版本下运行，那么在升级了Driver后，此程序在保持原CUDA版本的情况下，仍然可以在新的更高版本的驱动下运行。换句话说，某一具体的cuda版本存在与之对应的最小驱动版本。而对于cuda11和cuda10这两个主版本下，兼容的情况也有细微的却别。兼容性对照表可以查看。</p>
+<p>&emsp;&emsp;<font color=red>1. 对于cuda11主版本 </font>（cuda版本是X.Y.X三段式，其中X为主版本号，Y为次版本号），那么对于以11开头的所有CUDA版本来说，只要driver版本&gt;&#x3D;450.80.02*, 则即可满足所有的CUDA11.0,11.1,11.2等以11.x开头的CUDA运行时版本。这种兼容模式称作为为次版本兼容（Minor Version Compatibility）。当然这种兼容是“limited feature-set”，换句话说满足在保持驱动不变下，升级cuda版本后，运行不出错，但是对于一些高版本的cuda的特性，如果要更好的使用或者性能，也需要升级driver驱动。比如对于cuda11.2，官方的cuda toolkit包中推荐安装的driver是&gt;&#x3D;460.00。</p>
+<p>&emsp;&emsp;回到上面的问题1，我们用的云开发GPU是一个vGPU实例，把Tesla T4 从一个GPU虚拟化出两个vGPU分配给两台虚拟机，nvidia-smi显示Driver Version为450.102.04，而CUDA Version显示的是11.0，通过上文的说明，可以发现此虚拟机支持包括11.x在内的所有cuda11版本，而CUDA Version显示的可以认为是最高兼容的CUDA“主版本”。这里验证的方法也很简单，可以在云开发GPU机器中安装任意的cuda10.x&#x2F;cuda11.x，通过编译cuda sampler示例中的deviceQuery程序验证。</p>
+<table>
+<thead>
+<tr>
+<th>cuda10.1</th>
+<th>cuda11.0</th>
+<th>cuda11.2</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda10.1.jpg" alt="cuda10.1"></td>
+<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda11_0.jpg" alt="cuda11.0"></td>
+<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda11_2.jpg" alt="cuda11.2"></td>
+</tr>
+</tbody></table>
+<p>&emsp;&emsp;<font color=red>2. 对于cuda10这主版本</font>，每一个cuda10.x的版本都有与之对应的最小驱动版本号，例如下图是截取自<a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a>。可以看到cuda10.0&#x2F;10.1&#x2F;10.2对应的最小满足的版本号均不一样，不同于cuda11.x，可以在驱动不变的情况下升级cuda，cuda10.x，想要升级从10.1升级到10.2，那么驱动版本必须要大于等于440.33。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_table.jpg" alt="cuda_table"></p>
+<p>&emsp;&emsp;当我们公司的训练平台1创建一个”所谓的”cuda_version版本为10.2的任务，那么分配给我们的机器对应的driver版本号为440.64.00，那么假如我们安装cuda11.2，则显而易见编译后运行上文的deviceQuery程序会返回错误。</p>
+<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/devicequery.jpg" alt="device_query"></p>
+<p>&emsp;&emsp;而对于GPU来说，虚拟机中的驱动都是450.102.04，因此可以支持任意cuda11及以下的CUDA Runtime。</p>
+<h3 id="兼容原则三：有限的前向兼容"><a href="#兼容原则三：有限的前向兼容" class="headerlink" title="兼容原则三：有限的前向兼容"></a>兼容原则三：有限的前向兼容</h3><p>&emsp;&emsp;后向兼容是需要在cuda升级后，驱动也需要根据要求进行升级（或者不变）。而前向兼容的意思就是，在cuda升级后，driver不需要对内核态相关包进行升级，而只需要变更相关用户态文件即可。目的就是可以在老旧驱动上基于新的cuda版本编译程序，从而获取到最新的cuda特性。 而为什么说是有限的兼容，主要表现在两点限制：1. 限制了GPU卡的类型，只有NVIDIA Data Center&#x2F;Tesla 系列（和小部分特殊的RTX）的GPU卡. 2. 前向兼容的能力理论上只有在需要跨cuda主版本的时使用，例如本来最高只支持cuda版本10.1的Driver418，可以通过安装正确的Compat Package,使其在不更新内核态驱动的情况，支持cuda10.1~cuda11.6。具体可以参考官方文档的前向兼容矩阵，来下载安装对应的兼容包。<a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a></p>
+<h3 id="兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容"><a href="#兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容" class="headerlink" title="兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容"></a>兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容</h3><p>&emsp;&emsp;这部分的兼容性原则理解起来，需要涉及到cuda应用程序编译的相关知识。一个写好的cuda程序，通过nvcc编译后的产物可以包含两种形式，一个是二进制的cubin对象，另一个是PTX（Parallel Thread Execution）汇编代码。</p>
+<p>&emsp;&emsp;cubin是特定于指定的GPU架构的，cubin二进制对象对于GPU架构的计算能力（计算能力只是代表一个GPU的能力特性与性能高低无关）是一个向后兼容的，并且对GPU计算能力也是类似Minor Version Compatibility，换句话说，为计算能力为X.y的GPU生成的cubin对象，只能在计算能力为X.z且z&gt;&#x3D;y的GPU上运行。举个例子：为7.0计算能力生成的cubin，可以在7计算能力为7.5的GPU上执行，但是无法在计算能力为8.0的GPU上执行。</p>
+<p>&emsp;&emsp;那对于编译成PTX形式的产物，在cuda应用程序运行加载时，会先由设备驱动程序进一步把PTX通过JIT技术（即时编译）编译成对应GPU架构或者计算能力的cubin，这也就意味着此PTX可以在计算能力高于当前生成的此PTX计算能力的GPU上运行。关于更多JIT的内容可以参考：<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation">Programming Guide :: CUDA Toolkit Documentation</a></p>
+<p>&emsp;&emsp;因此，如果一个cuda应用程序在编译时选择包含PTX相关产物，“理论上”可以更好的保证在GPU架构升级后，代码仍然可以兼容运行，换句话说，”理论”上一个原先使用cuda10.x编译且可以在Volta架构V100上运行的应用，选择选择生成PTX二进制代码，那么可以在Ampere架构的A100上运行。</p>
+<p>&emsp;&emsp;但是回到一个具体的案例，事实上对于pytorch，由于受制于使用的cuDNN与GPU架构升级的兼容的原因（cuDNN7与Ampere架构不兼容），以及pytorch使用pip wheel安装或者conda安装（pytorch在编译过程根据不同的安装方式会选择不同的编译模式，例如conda安装会选择使用包含PTX的二进制版本，而pip wheel安装可能不会包含），想要使用A100机器训练，必须升级到cuda11且cuDNN8以上版本的pytorch来可以使用。</p>
+<p>&emsp;&emsp;换句话说，GPU的架构在一定程度上限制了cuda的版本（注：计算能力只是代表一个GPU的能力特性与性能高低无关）关于更多关于编译链接的内容，可以参考官网文档：<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html">NVCC :: CUDA Toolkit Documentation</a></p>
+<h2 id="2-归根还是容器中”挂载”宿主机的”文件”"><a href="#2-归根还是容器中”挂载”宿主机的”文件”" class="headerlink" title="2. 归根还是容器中”挂载”宿主机的”文件”"></a>2. 归根还是容器中”挂载”宿主机的”文件”</h2><p>&emsp;&emsp;要回答第二个问题，其实就是理解我们训练时候容器中CUDA 运行时所用的GPU驱动（或者说是CUDA driver API）到底是宿主机的驱动文件还是镜像中的驱动文件。这里可以用云开发GPU机器上的docker来作为观察对象。</p>
+<p>&emsp;&emsp;我使用的云开发GPU机器中已经安装了的docker，事实上是把原来底层用来通过操作系统调用创建运行容器的“runc”组件替换为nvidia-container-runtime组件（关于runC的一些概念，可以参考之前的<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6.html">从kubernetes中容器生态窥探设计模式的哲学</a>），当然nvidia-contianer-runtime本质上是一个做了修改后的runc组件，区别是它增加了一个自定义的prestart hook，目的是在创建容器后，在启动容器前，调用这个hook，而这个hook本身做的就是一些类似将宿主机的device&#x2F;driver文件等挂载进容器中。下图为NVIDIA官网介绍NVIDIA Container的大致架构组件图。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/gpu_container.jpg" alt="gpu_container"></p>
+<p>&emsp;&emsp;那到底具体将宿主机的哪些设备文件挂载进了容器呢。我们可以打开nvidia-container-runtime的debug功能，详细在其日志中查看所有文件设备挂载列表，具体为修改&#x2F;etc&#x2F;nvidia-container-runtime&#x2F;config.toml文件</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[nvidia-container-cli]</span><br><span class="line">environment = []</span><br><span class="line">debug = &quot;/var/log/nvidia-container-toolkit.log&quot;</span><br><span class="line">load-kmods = true</span><br><span class="line">ldconfig = &quot;@/sbin/ldconfig&quot;</span><br><span class="line">[nvidia-container-runtime]</span><br><span class="line">debug = &quot;/var/log/nvidia-container-runtime.log&quot;</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;打开debug功能后，我们重新通过docker 启动一个容器</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run  --rm --gpus &#x27;&quot;device=0&quot;&#x27; --net host  -it mirrors.tencent.com/shadow_test_xiaobaihe/test_for_light:torch_ptx /bin/bash</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;启动成功后，我们发现可以使用nvidia-smi命令查看挂载进容器的GPU情况。明明我的镜像中没有nvidia-smi这个二进制程序，为什么启动后文件就可以直接使用呢？那么秘密事实上就在nvidia-container-toolkit这个prehook内帮我们完成了。打开上方的&#x2F;var&#x2F;log&#x2F;nvidia-container-toolkit.log文件，可以详细的查询到整个hook过程。</p>
+<p>&emsp;&emsp;其中我们发现，hook过程中向容器中注入了包括宿主机的二进制工具，例如nivida-smi&#x2F;nvida-debugdump等，宿主机的上的库，例如很重要的CUDA Driver API库libcuda.so。另外还有很重要的是在宿主机中通过mknod创建所需的nvidia相关的设备文件，并将宿主机的文件设备文件注入到容器中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 注入宿主机的二进制程序</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.228302 19802 nvc_mount.c:112] mounting /usr/bin/nvidia-smi at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/bin/nvidia-smi</span><br><span class="line">I0311 03:09:13.228326 19802 nvc_mount.c:112] mounting /usr/bin/nvidia-debugdump at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/bin/nvidia-debugdump</span><br><span class="line"></span><br><span class="line"># 注入宿主机的CUDA Driver库</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.228463 19802 nvc_mount.c:112] mounting /usr/lib64/libcuda.so.450.102.04 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/lib64/libcuda.so.450.102.04</span><br><span class="line">I0311 03:09:13.228484 19802 nvc_mount.c:112] mounting /usr/lib64/libnvidia-opencl.so.450.102.04 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/lib64/libnvidia-opencl.so.450.102.04</span><br><span class="line"></span><br><span class="line"># 创建设备文件，并将宿主机设备文件注入到容器中</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.207136 19807 nvc.c:282] running mknod for /dev/nvidia0</span><br><span class="line">I0311 03:09:13.228019 19802 nvc_info.c:705] listing device /dev/nvidia0 (GPU-40143293-c4ff-11eb-ba91-04c440212a27 at 000000    00:00:09.0)</span><br><span class="line">I0311 03:09:13.280933 19802 nvc_mount.c:208] mounting /dev/nvidia0 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e    78fbd25ce10eb4ac52aeccac393d6645220770f/merged/dev/nvidia0</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;由此可以看到在使用nvidia-contiainer-runtime这种容器使用GPU的解决方案方案下，容器中使用CUDA Driver还有nvidia-smi都是来自于宿主机的，不需要在镜像中安装CUDA Driver。而如果在镜像中包含了CUDA driver库，可能会导致容器在hook过程中，在建立libcuda.so软链时，使用镜像中的driver库，从而可能触发上文说的”前向兼容”流程（即有可能镜像中使用的用户态的driver驱动高于宿主机的内核态的启动，从而使得GPU认为应该用前向兼容），而往往前向兼容是比较有限的，受制于GPU机型，还有驱动版本等，从而导致报错，例如可能出现forwoard compatibilty报错。</p>
+<h1 id="回到训练平台"><a href="#回到训练平台" class="headerlink" title="回到训练平台"></a>回到训练平台</h1><p>&emsp;&emsp;根据第二个问题的答案，这就是为什么我们在各种平台训练的时候，镜像中都只需要打包CUDA Runtime和CUDA Libraries即可，而不需要存在驱动的相关库。因为训练容器使用的本身是宿主机上的驱动库。</p>
+<p>&emsp;&emsp;而至于为什么同样的镜像和代码，在平台2可以正常运行，但是在平台1有的时候运行出错。这主要是因为不同平台所处集群中的机器驱动并不都是最新的，有一些机器驱动还是440只能到最高支持cuda10.2，而有的机器的驱动已经是450，可以支持到cuda11.x，而根据上文说的兼容性原则，如果镜像中使用的CUDA runtime库是cuda11，而实际上平台分配到的机器驱动只有440，那么根据上述的向后兼容原则，肯定是不行的，所以需要在训练平台1中强制指定cuda_version参数为11.0。平台2总是支持的原因，也在于其GPU宿主机的机器驱动比较新，都是支持cuda11.x的。</p>
+<h2 id="在训练平台中训练任务"><a href="#在训练平台中训练任务" class="headerlink" title="在训练平台中训练任务"></a>在训练平台中训练任务</h2><p>&emsp;&emsp;现在往往大多数公司的训练平台都是基于kubernetes平台所搭建的，甚至在一个公司内部下的GPU集群是由多个k8s集群所组成的，在其之上，不同部门都会搭建自己不同的训练平台。例如本例中的平台1和平台2，其算力都来自于最底层的k8s集群。不同的训练平台，可以看做是不同的k8s租户，通过不同的的方案，来实现一个训练任务的资源创建。</p>
+<p>&emsp;&emsp;在一年前，大模型还没有像如今这么繁荣的情况下，主要使用的k8s中的<a target="_blank" rel="noopener" href="https://www.redhat.com/zh/topics/containers/what-is-a-kubernetes-operator">Operator</a>来定制我们训练任务的多机多卡Pod以及网络的等组合方式，使用kubeflow&#x2F;mpi-operator方式，来创建满足all-reduce方式的通用任务。通过mpi-operator并配合k8s的CRD（CRD–custom resource definition）来引用MPIJob这个新的对象类型，换句话说训练平台在创建一个任务后通过Operator创建对应CR(custom resource)进行调度。这种方法更接近与云原生的kubeflow，同事可以通过Operator方式，扩展使用Pytorch-Operator&#x2F;Tensorflow-Operator等（目前的mpi-operator服务于类horovod并行训练）。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/k8s_operator_structure.png" alt="k8s_operator"></p>
+<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a></li>
+<li><a target="_blank" rel="noopener" href="https://forums.developer.nvidia.com/t/how-to-use-cuda-compatibility-package-to-use-a-newer-driver-on-an-older-kernel-module/77533/4">https://forums.developer.nvidia.com/t/how-to-use-cuda-compatibility-package-to-use-a-newer-driver-on-an-older-kernel-module/77533/4</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#cuda-compatibility-and-upgrades">Best Practices Guide :: CUDA Toolkit Documentation</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview">Architecture Overview &mdash; NVIDIA Cloud Native Technologies documentation</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/" class="post-title-link" itemprop="url">从kubernetes中容器生态窥探设计模式的哲学</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+      
+
+      <time title="Created: 2023-10-17 15:07:35 / Modified: 16:37:28" itemprop="dateCreated datePublished" datetime="2023-10-17T15:07:35+08:00">2023-10-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>nishizhu</p>
+<blockquote>
+<p>CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
+</blockquote>
 <p>容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆的术语，都和容器生态的大公司之间的相互博弈的结果息息相关。而正是这些大公司博弈后制定的标准，使得kubernetes生态系统在不同厂商甚至操作系统之间可以更具灵活性，减少对单个公司项目的依赖。</p>
-<h2 id="从-Docker-容器-开始"><a href="#从-Docker-容器-开始" class="headerlink" title="从 Docker !&#x3D; 容器 开始"></a>从 Docker !&#x3D; 容器 开始</h2><p>容器本质上一种轻量级的虚拟化技术，通俗的讲提供应用程序一个被隔离的可运行的环境，并且这个环境可以方便的移植部署到其他地方，那么既然是技术，那么做到上述的要求的实现可以是多种多样的，不同的厂商公司可以按照他们的理解去实现这套虚拟化技术，也就出现后文所说的Kata容器&#x2F;gVisor等。而Docker可以认为是包含了容器的一种实现技术（runc），容器镜像，以及一切运行应用程序所需要的“配套设施”，它是对于应用开发的用户来说，体验友好的配套方案和工具集合。<p><br>然后，随着kubernetes的蓬勃发展，越来越多的公司开始使用kubernetes来管理集群和应用，这也导致不同公司希望根据自己理解和需求使用不同的容器技术来运行应用。换句话说kubernetes和容器底层实现是相互解耦的，那么想要做到这两者的解耦，入手就是从制定接口或者规范开始。</p>
-<h2 id="从-接口与规范-到-具体实现"><a href="#从-接口与规范-到-具体实现" class="headerlink" title="从 接口与规范 到 具体实现"></a>从 接口与规范 到 具体实现</h2><p>简单了解kubernetes可以知道，创建一个pod本质上就是通过RESTful api请求api-server，然后kubernetes根据控制层（control plane）来决定此pod如何编排，并最终将创建的请求移交给集群中的某一台node上的kubelet，也就是说从kubelet开始创建真实的容器。<br><img src="https://km.woa.com/asset/87d9256fa07c450dbbc1786a284be7c1?height=563&width=1214" alt="image"></p>
+<h2 id="从-Docker-容器-开始"><a href="#从-Docker-容器-开始" class="headerlink" title="从 Docker !&#x3D; 容器 开始"></a>从 Docker !&#x3D; 容器 开始</h2><p>容器本质上一种轻量级的虚拟化技术，通俗的讲提供应用程序一个被隔离的可运行的环境，并且这个环境可以方便的移植部署到其他地方，那么既然是技术，那么做到上述的要求的实现可以是多种多样的，不同的厂商公司可以按照他们的理解去实现这套虚拟化技术，也就出现后文所说的Kata容器&#x2F;gVisor等。而Docker可以认为是包含了容器的一种实现技术（runc），容器镜像，以及一切运行应用程序所需要的“配套设施”，它是对于应用开发的用户来说，体验友好的配套方案和工具集合。<br>然后，随着kubernetes的蓬勃发展，越来越多的公司开始使用kubernetes来管理集群和应用，这也导致不同公司希望根据自己理解和需求使用不同的容器技术来运行应用。换句话说kubernetes和容器底层实现是相互解耦的，那么想要做到这两者的解耦，入手就是从制定接口或者规范开始。</p>
+<h2 id="从-接口与规范-到-具体实现"><a href="#从-接口与规范-到-具体实现" class="headerlink" title="从 接口与规范 到 具体实现"></a>从 接口与规范 到 具体实现</h2><p>简单了解kubernetes可以知道，创建一个pod本质上就是通过RESTful api请求api-server，然后kubernetes根据控制层（control plane）来决定此pod如何编排，并最终将创建的请求移交给集群中的某一台node上的kubelet，也就是说从kubelet开始创建真实的容器。</p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/k8s_structure.jpg" alt="图1"></p>
 <center>图1</center>
-从kubelet开始，请求会先经过CRI（Container Runtime Interface）---- High Level Runtime 传递下去，然后再经过OCI （Open Container Initiative）规范实现的 ---- Low Level Runtime 创建和启动一个容器。**似乎**整个流程就是**kubelet->CRI->OCI->container**，但是这些运行时作用和本质到底是什么，为什么要这样设计，我们围绕下面这张图来阐述。
- <div align=center>![image](https://km.woa.com/asset/32e23f380b4a4c939713e28bb2c71931?height=387&width=479)
-  <center>图2</center>
-### CRI： 本质就是一个protobuf定义的rpc接口
-CRI 定义在kubernetes项目中kubelet下（kubelet/apis/cri/runtime/v1alpha2/api.proto）这些接口包括了两个Service, 一个是专门用于管理容器的接口集合，包括create/stop/start/remove/list等操作，而另一个专门负责镜像管理接口集合，包括pull/remove/list等操作。<p>
-既然定义了rpc接口，肯定会有client端和server端，所以从kubernetes的角度看，CRI的client就集成在kubelet内，而server端就是基于CRI定义的操作集合实现的各类所谓的High Level Runtime, 换句话就是从上游kubelet拿到gRPC请求，然后根据请求向下执行接口声明的众多操作，其中一些操作例如镜像管理，当前的High Level Runtime可以处理完成，而涉及到运行真实的容器则需要将请求转交给下面的Low Level Runtime，也就对应下文说的OCI的实现。<p>
-既然定义了CRI这个接口，**那么实现这个接口的服务端也可以是不一样的**。因此也就有了containerd和CRI-O两种实现。containerd来自于Docker, 并且目前通过一种CRI plugin的方式使其与CRI接口兼容。类似一个rpc服务端，是一个守护进程，等待上游的rpc请求，收到请求后可以**推送/拉取镜像，管理存储网络，并且创建/运行/监控容器的运行**等功能。与containerd相对应的CRI-O是另一个由Ret-hat发起的，更加精简的实现方案。正如上文所说，无论CRI接口怎么实现，其中都要有能力创建运行的真正的容器，即会将请求移交到更低级别运行时处理，例如操作系统这一层应该如何创建，使用的镜像应该符合什么标准。这些都需要有一个规范来约束，从而使各个厂商根据不同的需求实现的容器都可以兼容CRI实现层。这个时候OCI这个概念就应运而生了。
-### 开放容器标准只是一个规定
-OCI规定了容器应该如何运行，包括哪些状态，生命周期的管理标准，以及容器镜像标准大概是什么，具体细则可以[参考此链接](https://github.com/opencontainers/runtime-spec/blob/main/spec.md)。既然OCI是一个标准，那么肯定也有对应这个标准的众多实现，其中runc就是第一个符合OCI各项规范和标准的参考实现（reference implementation）。换言之，runc会用Linux内核系统调用（cgroup/namespace）创建操作容器。当然除了runc是一个实现外，现在比较知名的kata-container runtime以及google的gVisor也是OCI规范的一个实现，区别点就在后两者是强隔离容器，即容器运行在一个类似轻量级的虚拟机内，一个容器属于一个轻量级虚拟机，对于多租户平台上的用户有着更高的安全性（无法从一个容器内部攻击宿主机或者其他租户容器）。
+
+<p>从kubelet开始，请求会先经过CRI（Container Runtime Interface）—- High Level Runtime 传递下去，然后再经过OCI （Open Container Initiative）规范实现的 —- Low Level Runtime 创建和启动一个容器。<strong>似乎</strong>整个流程就是<strong>kubelet-&gt;CRI-&gt;OCI-&gt;container</strong>，但是这些运行时作用和本质到底是什么，为什么要这样设计，我们围绕下面这张图来阐述。</p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/cri_oci.jpg" alt="图2"></p>
+<center>图2</center>
+
+<h3 id="CRI：-本质就是一个protobuf定义的rpc接口"><a href="#CRI：-本质就是一个protobuf定义的rpc接口" class="headerlink" title="CRI： 本质就是一个protobuf定义的rpc接口"></a>CRI： 本质就是一个protobuf定义的rpc接口</h3><p>CRI 定义在kubernetes项目中kubelet下（kubelet&#x2F;apis&#x2F;cri&#x2F;runtime&#x2F;v1alpha2&#x2F;api.proto）这些接口包括了两个Service, 一个是专门用于管理容器的接口集合，包括create&#x2F;stop&#x2F;start&#x2F;remove&#x2F;list等操作，而另一个专门负责镜像管理接口集合，包括pull&#x2F;remove&#x2F;list等操作。<p><br>既然定义了rpc接口，肯定会有client端和server端，所以从kubernetes的角度看，CRI的client就集成在kubelet内，而server端就是基于CRI定义的操作集合实现的各类所谓的High Level Runtime, 换句话就是从上游kubelet拿到gRPC请求，然后根据请求向下执行接口声明的众多操作，其中一些操作例如镜像管理，当前的High Level Runtime可以处理完成，而涉及到运行真实的容器则需要将请求转交给下面的Low Level Runtime，也就对应下文说的OCI的实现。<p><br>既然定义了CRI这个接口，<strong>那么实现这个接口的服务端也可以是不一样的</strong>。因此也就有了containerd和CRI-O两种实现。containerd来自于Docker, 并且目前通过一种CRI plugin的方式使其与CRI接口兼容。类似一个rpc服务端，是一个守护进程，等待上游的rpc请求，收到请求后可以<strong>推送&#x2F;拉取镜像，管理存储网络，并且创建&#x2F;运行&#x2F;监控容器的运行</strong>等功能。与containerd相对应的CRI-O是另一个由Ret-hat发起的，更加精简的实现方案。正如上文所说，无论CRI接口怎么实现，其中都要有能力创建运行的真正的容器，即会将请求移交到更低级别运行时处理，例如操作系统这一层应该如何创建，使用的镜像应该符合什么标准。这些都需要有一个规范来约束，从而使各个厂商根据不同的需求实现的容器都可以兼容CRI实现层。这个时候OCI这个概念就应运而生了。</p>
+<h3 id="开放容器标准只是一个规定"><a href="#开放容器标准只是一个规定" class="headerlink" title="开放容器标准只是一个规定"></a>开放容器标准只是一个规定</h3><p>OCI规定了容器应该如何运行，包括哪些状态，生命周期的管理标准，以及容器镜像标准大概是什么，具体细则可以<a target="_blank" rel="noopener" href="https://github.com/opencontainers/runtime-spec/blob/main/spec.md">参考此链接</a>。既然OCI是一个标准，那么肯定也有对应这个标准的众多实现，其中runc就是第一个符合OCI各项规范和标准的参考实现（reference implementation）。换言之，runc会用Linux内核系统调用（cgroup&#x2F;namespace）创建操作容器。当然除了runc是一个实现外，现在比较知名的kata-container runtime以及google的gVisor也是OCI规范的一个实现，区别点就在后两者是强隔离容器，即容器运行在一个类似轻量级的虚拟机内，一个容器属于一个轻量级虚拟机，对于多租户平台上的用户有着更高的安全性（无法从一个容器内部攻击宿主机或者其他租户容器）。</p>
 <p>
 让我们再回到CRI，docker本身是先于kubernetes出现的，在最早没有CRI的时候，docker可以认为是被固定到kubernetes上的，那么固定的方法就是通过一个dockershim的组件，来桥接kubelet和docker之间的交互。然而kubernetes从v1.20开始正式放弃对Docker的支持（当然放弃支持并不是不能在kubernetes集群中使用docker集成的运行时，而是指不建议将docker作为底层运行时，即不使用dockershim和docker daemon这套集成运行时，但是仍然可以使用OCI标准中规定符合镜像要求的docker镜像），也从侧面看出CRI的出现，让kubernetes可以兼容不同的High Level Runtime，让不同的厂商分得一杯羹。下图中分别描述了经典kubelet与Docker的集成方案和现在选择containerd实现的CRI运行时配合某一oci实现的运行时的集成方案的区别，对于后者可以将containerd替换成上文说的CRI-O，并且oci runtime也可以任意选择不同厂商的容器实现方案。
 
-<p><img src="https://km.woa.com/asset/8fc64d212ee845d18709f2faca2a1964?height=668&width=1546" alt="image"><br> <center>图3</center></p>
+<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/runtime.jpg" alt="图3"><br> <center>图3</center></p>
 <h2 id="巧妙的桥接模式"><a href="#巧妙的桥接模式" class="headerlink" title="巧妙的桥接模式"></a>巧妙的桥接模式</h2><p>仔细的在查看一下图2，是不是很像设计模式中的”桥接模式”。下面是桥接模式的一个定义。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- 桥接是一种结构型设计模式，可将业务逻辑或一个大类拆分为不同的层次结构， 从而能独立地进行开发。</span><br><span class="line">- 层次结构中的第一层 （通常称为抽象部分） 将包含对第二层 （实现部分） 对象的引用。</span><br><span class="line">- 抽象部分将能将一些 （有时是绝大部分） 对自己的调用委派给实现部分的对象。 所有的实现部分都有一个通用接口， 因此它们能在抽象部分内部相互替换。</span><br></pre></td></tr></table></figure>
 
@@ -240,156 +581,6 @@ OCI规定了容器应该如何运行，包括哪些状态，生命周期的管�
 <li><a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/container-runtimes-part-2-anatomy-low-level-contai">Container Runtimes Part 2: Anatomy of a Low-Level Container Runtime - Ian Lewis</a></li>
 <li><a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/container-runtimes-part-3-high-level-runtimes">Container Runtimes Part 3: High-Level Runtimes - Ian Lewis</a></li>
 </ul>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/2023/%E4%B8%80%E5%88%87%E4%BB%8EDEBUG%E8%AF%B4%E8%B5%B7%EF%BC%88%E7%AC%AC%E4%B8%80%E7%AF%87%EF%BC%9A%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83%EF%BC%89/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="xiaobaidemu">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2023/%E4%B8%80%E5%88%87%E4%BB%8EDEBUG%E8%AF%B4%E8%B5%B7%EF%BC%88%E7%AC%AC%E4%B8%80%E7%AF%87%EF%BC%9A%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83%EF%BC%89/" class="post-title-link" itemprop="url">一切从DEBUG说起（第一篇：建立k8s的DEBUG环境）</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-      
-
-      <time title="Created: 2023-10-17 14:49:33 / Modified: 15:10:20" itemprop="dateCreated datePublished" datetime="2023-10-17T14:49:33+08:00">2023-10-17</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/2023/hello-world/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="xiaobaidemu">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2023/hello-world/" class="post-title-link" itemprop="url">Hello World</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2023-10-17 11:52:24" itemprop="dateCreated datePublished" datetime="2023-10-17T11:52:24+08:00">2023-10-17</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
 
       
     </div>
