@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="我在首次接触k8s最头疼的问题是，面对上百万行错综复杂的代码，到底应该如何抓住”主次”，从哪一个文件看起。很多源码分析的教程更多的是从cmd&#x2F;kube-apiserver开始，诚然这是一个从零开始debug的手段，但是debug一会儿就会陷入非常深的调用链的细节，导致整个过程痛苦不堪，这里我想从一个pod从请求到创建再到整个生命周期角度，以方式聊聊源码，这种方法会让阅读变得更加简单。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手DEBUG(第二篇：从一个到达APIServer的请求开始)">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="我在首次接触k8s最头疼的问题是，面对上百万行错综复杂的代码，到底应该如何抓住”主次”，从哪一个文件看起。很多源码分析的教程更多的是从cmd&#x2F;kube-apiserver开始，诚然这是一个从零开始debug的手段，但是debug一会儿就会陷入非常深的调用链的细节，导致整个过程痛苦不堪，这里我想从一个pod从请求到创建再到整个生命周期角度，以方式聊聊源码，这种方法会让阅读变得更加简单。">
+<meta property="og:locale">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/k8s_api_structure.png">
+<meta property="article:published_time" content="2023-10-18T07:14:22.000Z">
+<meta property="article:modified_time" content="2023-10-18T09:06:25.610Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/k8s_api_structure.png">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/","path":"手把手DEBUG-第二篇：从一个到达APIServer的请求开始/","title":"手把手DEBUG(第二篇：从一个到达APIServer的请求开始)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>手把手DEBUG(第二篇：从一个到达APIServer的请求开始) | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%8E%E7%90%86%E8%A7%A3API%E7%BB%93%E6%9E%84%E5%BC%80%E5%A7%8B"><span class="nav-text">从理解API结构开始</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BD%93%E4%B8%80%E4%B8%AA%E5%88%9B%E5%BB%BApod%E7%9A%84%E8%AF%B7%E6%B1%82%E8%BF%9B%E5%85%A5apiserver"><span class="nav-text">当一个创建pod的请求进入apiserver</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8B%A6%E6%88%AA%E5%99%A8%E5%A4%84%E7%90%86"><span class="nav-text">拦截器处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%80%E5%8C%96%E7%90%86%E8%A7%A3APIserver%E4%B8%AD%E7%9A%84http%E6%9C%8D%E5%8A%A1"><span class="nav-text">简化理解APIserver中的http服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9A%E4%BD%8D%E5%88%B0%E5%88%9B%E5%BB%BA%E7%9A%84%E9%80%BB%E8%BE%91"><span class="nav-text">定位到创建的逻辑</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%A5deployments%E4%B8%BA%E4%BE%8B%E5%86%8D%E6%9D%A5%E6%A2%B3%E7%90%86%E4%B8%80%E9%81%8D%E5%88%86%E6%9E%90%E8%AF%B7%E6%B1%82%E7%9A%84%E5%85%A8%E6%B5%81%E7%A8%8B"><span class="nav-text">以deployments为例再来梳理一遍分析请求的全流程</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%99%84%E5%BD%95"><span class="nav-text">参考附录</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="手把手DEBUG(第二篇：从一个到达APIServer的请求开始) | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手DEBUG(第二篇：从一个到达APIServer的请求开始)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+      
+
+      <time title="Created: 2023-10-18 15:14:22 / Modified: 17:06:25" itemprop="dateCreated datePublished" datetime="2023-10-18T15:14:22+08:00">2023-10-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>我在首次接触k8s最头疼的问题是，面对上百万行错综复杂的代码，到底应该如何抓住”主次”，从哪一个文件看起。很多源码分析的教程更多的是从cmd&#x2F;kube-apiserver开始，诚然这是一个从零开始debug的手段，但是debug一会儿就会陷入非常深的调用链的细节，导致整个过程痛苦不堪，这里我想<font color=red>从一个pod从请求到创建再到整个生命周期角度</font>，以方式聊聊源码，这种方法会让阅读变得更加简单。</p>
+</blockquote>
+<h1 id="从理解API结构开始"><a href="#从理解API结构开始" class="headerlink" title="从理解API结构开始"></a>从理解API结构开始</h1><p>&emsp;&emsp;k8s中一个特定restful URL Path 对应着一个固定的资源. 一般而言一个URL Path如下由几个部分构成</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/[&#123;apis&#125;|&#123;api&#125;]/[&#123;group&#125;]/&#123;version&#125;/namespaces/&#123;namespace&#125;/&#123;resource&#125;/&#123;object实体名&#125;[/simple资源]</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;注：simple资源主要是给特定对象的特定动作使用，非持久化，例如&#x2F;pods&#x2F;{object name}&#x2F;status 可以用来对pod对象修改状态<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/k8s_api_structure.png" alt="k8s_api_structure"><br>&emsp;&emsp;有了URL  path，那下一步就是定位到path是如何同具体的处理逻辑相绑定的，即如何进行路由的。这里我们以pods作为上面URL Path中的resource，来分析register逻辑。这里先说结论，对于pods资源的相关处理逻辑主要在 vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;installer.go文件中APIInstaller中的registerResourceHandlers方法。</p>
+<p>&emsp;&emsp;此函数的操作是将一个具体资源对应的restful URL path按照restful架构遵循的统一接口原则，进行资源注册，即给每个资源对应的http方法，例如GET, PUT, POST, PATCH,DELETE 注册不同的函数执行逻辑，以此来完成对特定资源实体的增删改查能力。</p>
+<p>&emsp;&emsp;上面，我们只从最小维度（针对某一个URL）简述注册逻辑，我们从一个宏观的角度来看看整个apiserver启动时候，都经过了哪些处理。宏观上apiserver，通过不同的URL path前缀将APIserver分成三种。分别是一个包含内置API对象的<font color=red>KubeAPIServer</font>和两个不同方式用于扩展服务的<font color=red>APIExtensionsServer</font>和<font color=red>AggregatorServer</font>。下面是部分前缀对应不同的server示例</p>
+<table>
+    <tr>
+        <th>server类型</th><th>URL前缀</th><th>举例 </th>
+    </tr>
+    <tr>
+        <td rowspan="2">apiextensions-apiserver</td>
+        <td>/apis/apiextensions.k8s.io/</td>
+        <td>customresourcedefinations, customresourcedefinations/status</td>
+    </tr>
+    <tr>
+        <td>/apis/{自定义group}</td>
+        <td align="left">例如安装kubeflow/training-operator后，可以使用/apis/kubefow.org/v1/namespace/{ns}/pytorchjobs/{name}
+路由路径匹配过程如下：匹配/apis/->不匹配所有goRestfulContainer已经注册的前缀->匹配/apis/kubeflow.org/v1/前缀对应nonGoRestfulMux->crdHandler
+        </td>
+    </tr>
+    <tr>
+        <td rowspan="2">apiserver</td>
+        <td>/api/v1</td>
+        <td>pods, pods/status, pods/log, bindings,replicationControllers, nodes,events...</td>
+    </tr>
+    <tr>
+        <td>/apis</td>
+        <td>apps, authentication.k8s.io, batch, rbac.authorization.k8s.io
+        </td>
+    </tr>
+    <tr>
+        <td rowspan="2">aggregator</td>
+        <td>/apis/apiregistration.k8s.io</td>
+        <td>apiservices, apisevices/status</td>
+    </tr>
+    <tr>
+        <td>/apis/{自定义group}</td>
+        <td align="left">例如[安装k8s官方的sample-apiserver](https://github.com/kubernetes/sample-apiserver)后，可以使用/apis/wardle.example.com/v1alpha1/namespaces/{namespace}/flunders/{name}路由路径匹配过程如下：匹配/apis->不匹配所有goRestfulContainer已经注册的前缀->匹配/apis/wardle.example.com/v1/前缀对应nonGoRestfulMux->proxyHandler(vendor/k8s.io/kube-aggregator/pkg/apiserver/handler_proxy.go)
+        </td>
+    </tr>
+</table>
+下面是这三种Server的注册逻辑对象的关注点代码
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 这一部分注册分为两类，并且是&quot;先后&quot;注册,一类是面向CRD的APIExtensions服务,另一类是面向k8s内置API对象的APIServer</span><br><span class="line">- createAPIExtensionsServer(...) # --- cmd/kube-apiserver/app/server.go</span><br><span class="line">  - completedConfig.New(...) # -- vender/k8s.io/apiextensions-apiserver/apiserver.go</span><br><span class="line">    - GenericAPIServer.InstallAPIGroups/APIGroupVersion.InstallREST/APIInstaller.registerResourceHandlers # 和下方注册内置API对象相同</span><br><span class="line">  - 启动和CRD相关controller协程，用于&quot;实时&quot;将用户定义的CRD转化成对应的可执行上述增删改查的restful API</span><br><span class="line">- CreateKubeAPIServer(...) # --- cmd/kube-apiserver/app/server.go</span><br><span class="line">  - completedConfig.New(...) # --- pkg/controlplane/instance.go</span><br><span class="line">      # 在APIServer注册中，又区分为为两类，一种是上图中/api为前缀的核心资源，例如pods/nodes/services等，另一种为/apis为前缀的资源</span><br><span class="line">      - Instance.InstallLegacyAPI(...) # /api为前缀</span><br><span class="line">      - Instance.InstallAPI(...) # /apis为前缀</span><br><span class="line">        - GenericAPIServer.InstallAPIGroups(...) # 注册同一个以/apis前缀的所有路由（注意如果前缀是/apis则有一个特例，以apiextensions.k8s.io为group的资源组和其他资源组是分开处理的，因为apiextensions.k8s.io代表的是CRD一种扩展资源和其他原生api不一样，所以分开注册）--- vender/k8s.io/apiserver/pkg/server/genericapiserver.go</span><br><span class="line">          - APIGroupVersion.InstallREST(...) # 以group+version维度进行路由注册，一个group+version对应着一个go-restful的webservice实例 --- vender/k8s.io/apiserver/pkg/endpoints/groupversion.go</span><br><span class="line">            - APIInstaller.registerResourceHandlers(...) # --- vender/k8s.io/apiserver/pkg/endpoints/installer.go</span><br><span class="line">    # 创建AggregatorServer,这是另一种与CRD方式不同的扩展apiserver的方式</span><br><span class="line">- createAggregatorServer(... ) # --- cmd/kube-apiserver/app/server.go</span><br></pre></td></tr></table></figure>
+
+<h1 id="当一个创建pod的请求进入apiserver"><a href="#当一个创建pod的请求进入apiserver" class="headerlink" title="当一个创建pod的请求进入apiserver"></a>当一个创建pod的请求进入apiserver</h1><h2 id="拦截器处理"><a href="#拦截器处理" class="headerlink" title="拦截器处理"></a>拦截器处理</h2><p>&emsp;&emsp;在apiserver中拦截器并非使用go-restful中自带的restful.Filter方式实现的，而是使用比较朴实的方式，通过类似装饰函数的方式层层封装http.Handler，来达到请求过来后层层拦截。可以关注DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler 函数，此函数像类似入栈的顺序，先装饰的最后执行，可以看到请求进来会依次非常多的拦截处理，其中很重要的先后执行Authentication认证&#x2F;Authorization授权 （注：访问控制逻辑不在此处执行，是在执行完拦截处理后）在实现上。</p>
+<h2 id="简化理解APIserver中的http服务"><a href="#简化理解APIserver中的http服务" class="headerlink" title="简化理解APIserver中的http服务"></a>简化理解APIserver中的http服务</h2><p>&emsp;&emsp;无论APIServer多么复杂，其本质仍然是使用的golang的net&#x2F;http。即下方这行代码（不过源码中没有这么直白，直接调用ListenAndServe启动，具体启动逻辑可以查阅vendor&#x2F;k8s.io.apiserver&#x2F;pkg&#x2F;server&#x2F;secure_serving.go的RunServer函数）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">s := &amp;http.Server&#123;</span><br><span class="line">  Addr:           &quot;:8080&quot;,</span><br><span class="line">  Handler:        handler, </span><br><span class="line"> &#125;</span><br><span class="line">s.ListenAndServe()</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;所有的api注册逻辑可以认为是围绕实现Handler这个接口中的ServeHTTP(ResponseWriter, *Request)。但是有一个问题，上一节说APIServer使用的是go-restful库进行路由注册，来实现restful风格的API，那具体是如何实现的呢？这里我们先定位到k8s中handler接口实现对应的struct—-APIServerHandler，这个APIServerHandler实现了接口中的ServeHTTP。由下方代码可以看出所有的请求处理的起点是从FullHandlerChain开始，而这个FullHandlerChain就是上文说的各类顺序执行的拦截器，拦截器的最后是一个Director，同样对应的是一个实现了http.Handler的接口的对象，而这个Direcrtor对应的就是真实处理资源增删改查的实现，而从下方的代码可以看到director包含了不同的路由方式，一个是基于go-restful的restful.Container(goRestfulContainer)，另一个是k8s自己实现的一种根据URL前缀匹配的路由mux.PathRecorderMux(nonGoRestfulMux)。那根据第一节中不同前缀对应处理的资源类型不同，可以推断这两个不同的路由方式也对应着处理不同的资源。</p>
+<p>&emsp;&emsp;goRestfulContainer：主要用于处理核心组&#x2F;api&#x2F;v1，APIServer内置资源组例如&#x2F;apis&#x2F;为前缀的batch&#x2F;apps等资源，director中会直接调用restful.Container中的Dispatch方法，来直接使用go-restful中自己实现的路由逻辑。</p>
+<p>&emsp;&emsp;nonGoRestfulMux：主要处理通过CRD方式或者通过AggregatorServer方式扩展的资源，虽然这些资源同样以&#x2F;apis前缀开头，但是可以看到在Director的实现中，会通过比对是否URL已经在goRestfulContainer中注册的方式，来判断是否执行nonGoRestfulMux路由。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">// APIServerHandlers holds the different http.Handlers used by the API server.</span><br><span class="line">// This includes the full handler chain, the director (which chooses between gorestful and nonGoRestful,</span><br><span class="line">// the gorestful handler (used for the API) which falls through to the nonGoRestful handler on unregistered paths,</span><br><span class="line">// and the nonGoRestful handler (which can contain a fallthrough of its own)</span><br><span class="line">// FullHandlerChain -&gt; Director -&gt; &#123;GoRestfulContainer,NonGoRestfulMux&#125; based on inspection of registered web services</span><br><span class="line">type APIServerHandler struct &#123;</span><br><span class="line"> // FullHandlerChain is the one that is eventually served with.  It should include the full filter</span><br><span class="line"> // chain and then call the Director.</span><br><span class="line"> FullHandlerChain http.Handler</span><br><span class="line"> // The registered APIs.  InstallAPIs uses this.  Other servers probably shouldn&#x27;t access this directly.</span><br><span class="line"> GoRestfulContainer *restful.Container</span><br><span class="line"> // NonGoRestfulMux is the final HTTP handler in the chain.</span><br><span class="line"> // It comes after all filters and the API handling</span><br><span class="line"> // This is where other servers can attach handler to various parts of the chain.</span><br><span class="line"> NonGoRestfulMux *mux.PathRecorderMux</span><br><span class="line"> Director http.Handler</span><br><span class="line">&#125;</span><br><span class="line">type director struct &#123;</span><br><span class="line"> name               string</span><br><span class="line"> goRestfulContainer *restful.Container</span><br><span class="line"> nonGoRestfulMux    *mux.PathRecorderMux</span><br><span class="line">&#125;</span><br><span class="line">// ServeHTTP makes it an http.Handler</span><br><span class="line">func (a *APIServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line"> a.FullHandlerChain.ServeHTTP(w, r)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="定位到创建的逻辑"><a href="#定位到创建的逻辑" class="headerlink" title="定位到创建的逻辑"></a>定位到创建的逻辑</h2><p>&emsp;&emsp;有了以上的基础铺垫，下一步我们将从创建一个pod开始进行debug，通过跟踪整个pod和生命周期相关的对象的变更(比如pods&#x2F;status, event)来更详细的展示pod的调度过程。</p>
+<p>&emsp;&emsp;这里我们现将所有&#x2F;etc&#x2F;kubernetes&#x2F;manifests的kube-apiserver.yaml&#x2F;kube-controller-manager.yaml以及kube-scheduler.yaml移除（停止调度和控制组件的执行，避免pod创建后立刻进入调度流程，导致无法捕捉到状态细节），这里我们准备一个简单的pods，其对应的yaml如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: myapp-creater-demo</span><br><span class="line">  labels:</span><br><span class="line">    name: myapp-creater-demo</span><br><span class="line">    app: myapp-creater-demo</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">  - name: myapp-container</span><br><span class="line">    image: nginx</span><br><span class="line">    resources:</span><br><span class="line">      limits:</span><br><span class="line">        memory: &quot;32Mi&quot;</span><br><span class="line">        cpu: &quot;100m&quot;</span><br><span class="line">    imagePullPolicy: Always</span><br><span class="line">    command: [&#x27;sh&#x27;, &#x27;-c&#x27;, &#x27;nginx &amp;&amp; sleep infinity&#x27;]</span><br><span class="line">    ports:</span><br><span class="line">      - containerPort: 80</span><br><span class="line">  nodeSelector:</span><br><span class="line">     node-restriction.kubernetes.io/resource: gpu</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;然后打开debug，执行<strong>kubectl apply -f creater_pod.yaml</strong>来创建pods，跟踪pods。apply命令行为会包含两个动作—-即两个restful API ，会先<strong>查询是否存在对应名字的pods</strong>,如果不存在则会执行create操作。根据上面的分析，接口先执行我们可以将断点定位到vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;create.go中的createHandler，另外和pod对象存储相关的可以关心 pkg&#x2F;registry&#x2F;core&#x2F;rest&#x2F;storage_core.go(其中storageNewLegacyRESTStorage是和上文说的以&#x2F;api&#x2F;v1为前缀的k8s核心组件相关的存储接口，对于本例可以关系的pods以及其对应的子资源pods&#x2F;status)。下面我们用表格顺序梳理出整个调用链，以及调用链中关键的数据结构。</p>
+<table>
+<thead>
+<tr>
+<th align="left">调用顺序</th>
+<th align="left">文件</th>
+<th align="left">关键函数</th>
+<th align="left">以上述示例解释过程与数据结构</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">1</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;get.go</td>
+<td align="left">func GetResource(r rest.Getter, scope *RequestScope) http.HandlerFunc</td>
+<td align="left">根据上一节讲述的，注册阶段中会根据restful URL “&#x2F;api&#x2F;v1&#x2F;namespaces&#x2F;default&#x2F;pods&#x2F;myapp-creater-demo”映射处理逻辑，对于当前示例，请求在真实处理过程中，映射到GetResource逻辑</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
+<td align="left">func (e <em>Store) Get(ctx context.Context, name string, options</em>metav1.GetOptions) (runtime.Object, error)</td>
+<td align="left">从文件路径的generic看出这是一个对k8s中资源进行通用存储层操作的抽象，其中尤为重要的是这个Store结构体，根据注释可以了解到Store，其目的是可以嵌入到任何K8s的Kind对象中，提供CRUD统一操作，以及一些通用的包括ResourceVersion冲突检测，创建更新删除的通用策略</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
+<td align="left">func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, out runtime.Object) error</td>
+<td align="left">在etcd中查询以”&#x2F;registry&#x2F;pods&#x2F;default&#x2F;myapp-creater-demo” 为key的对象是否存在</td>
+</tr>
+<tr>
+<td align="left">4.1</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;create.go</td>
+<td align="left">func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Interface, includeName bool) http.HandlerFunc</td>
+<td align="left">1.  获取请求body体中的关于pod定义的内容</td>
+</tr>
+<tr>
+<td align="left">4.2</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">2.  将body内容反序列化成对应Kind的结构体对象，可以定位序列化后的对象为定义在pkg&#x2F;apis&#x2F;core&#x2F;types.go中的Pod结构体</td>
+</tr>
+<tr>
+<td align="left">5</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
+<td align="left">func (e <em>Store) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options</em>metav1.CreateOptions) (runtime.Object, error)</td>
+<td align="left">3.  紧跟上一步，开始创建，创建过程中会先执行准入控制，用来验证和修改用户设置的pod的参数是否合理</td>
+</tr>
+<tr>
+<td align="left">6.1</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;cacher&#x2F;cacher.go</td>
+<td align="left">func (c *Cacher) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error</td>
+<td align="left">4.  与etcd3交互，将encode为二进制，以&#x2F;registry&#x2F;pods&#x2F;default&#x2F;myapp-creater-demo为key</td>
+</tr>
+<tr>
+<td align="left">6.2</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
+<td align="left">func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error</td>
+<td align="left">-</td>
+</tr>
+</tbody></table>
+<p>&emsp;&emsp;到目前为止，关于用户定义pods的配置信息，已经写入了etcd存储中，并且可以看到Pod结构体中PodStatus结构体，记录状态的参数一直为Pending，并且对应的ContainerStatus也是空(由于已经关闭了调度进程，不会进一步的执行调度)</p>
+<h1 id="以deployments为例再来梳理一遍分析请求的全流程"><a href="#以deployments为例再来梳理一遍分析请求的全流程" class="headerlink" title="以deployments为例再来梳理一遍分析请求的全流程"></a>以deployments为例再来梳理一遍分析请求的全流程</h1><p>&emsp;&emsp;上文我们用一个pod的创建来简单部分主要逻辑，这节我们以查询Deployment为例，执行kubectl get deployment来逐层debug分析调用链（备注：这里除去身份认证，鉴权等各种过滤情况），分析完后我相信后面如果需要查看某些代码的设计，就可以从这些调用链入手。(下面以1.25.3版本为例文件中vender&#x2F;k8s.io本质上是对staging&#x2F;src&#x2F;k8s.io目录的软链)</p>
+<table>
+<thead>
+<tr>
+<th align="left">序号</th>
+<th align="left">文件</th>
+<th align="left">对应函数</th>
+<th align="left">备注</th>
+<th align="left">进入函数后关注的代码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">1.1</td>
+<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;handler.go</td>
+<td align="left">func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) （122行）</td>
+<td align="left">请求已经经过所有认证鉴权等拦截器</td>
+<td align="left">d.nonGoRestfulMux.ServeHTTP(w, req) (154行)</td>
+</tr>
+<tr>
+<td align="left">1.2</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">可以搜索相关拦截器（参考vender&#x2F;k8s。io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;config.go相关注册代码func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler</td>
+<td align="left">-</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;mux.go</td>
+<td align="left">func (h <em>pathHandler) ServeHTTP(w http.ResponseWriter, r</em>http.Request)（239行）</td>
+<td align="left">其上一个函数调用为func (m <em>PathRecorderMux) ServeHTTP(w http.ResponseWriter, r</em>http.Request)</td>
+<td align="left">prefixHandler.handler.ServeHTTP(w, r)（249行）</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">vender&#x2F;k8s.io&#x2F;kube-aggregator&#x2F;pkg&#x2F;apiserver&#x2F;handler_proxy.go</td>
+<td align="left">func (r <em>proxyHandler) ServeHTTP(w http.ResponseWriter, req</em>http.Request) （112行）</td>
+<td align="left">这里会决定是走本地的apiserver还是通过aggragator扩展的server</td>
+<td align="left">r.localDelegate.ServeHTTP(w, req)(125行)</td>
+</tr>
+<tr>
+<td align="left">4</td>
+<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;handler.go</td>
+<td align="left">func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) （122行）</td>
+<td align="left">会发现再次进入了这个函数，不同的是下一步调用的代码不一样，开始进入restful路由逻辑</td>
+<td align="left">d.goRestfulContainer.Dispatch(w, req) （146行）</td>
+</tr>
+<tr>
+<td align="left">5.1</td>
+<td align="left">vendor&#x2F;github.com&#x2F;emicklei&#x2F;go-restful&#x2F;v3&#x2F;container.go</td>
+<td align="left">1.  func (c <em>Container) Dispatch(httpWriter http.ResponseWriter, httpRequest</em>http.Request (197行)</td>
+<td align="left">restful源码，关注dispatch路由逻辑</td>
+<td align="left">1.  c.dispatch(httpWriter, httpRequest)（204行）</td>
+</tr>
+<tr>
+<td align="left">5.2</td>
+<td align="left">-</td>
+<td align="left">2.  func (c <em>Container) dispatch(httpWriter http.ResponseWriter, httpRequest</em>http.Request)（208行）</td>
+<td align="left">-</td>
+<td align="left">2.  route.Function(wrappedRequest, wrappedResponse) (299行)</td>
+</tr>
+<tr>
+<td align="left">6</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;get.go</td>
+<td align="left">func ListResource(r rest.Lister, rw rest.Watcher, scope *RequestScope, forceWatch bool, minRequestTimeout time.Duration) (169行)</td>
+<td align="left">一个restful到存储操作可以是一个一一对应关系，这里包含了从restful到etcd的操作流</td>
+<td align="left">result, err :&#x3D; r.List(ctx, &amp;opts) （278行）</td>
+</tr>
+<tr>
+<td align="left">7.1</td>
+<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
+<td align="left">1.  func (e <em>Store) List(ctx context.Context, options</em>metainternalversion.ListOptions)</td>
+<td align="left">RESTStorage实现</td>
+<td align="left">1.  out, err :&#x3D; e.ListPredicate(ctx, e.PredicateFunc(label, field), options) （335）</td>
+</tr>
+<tr>
+<td align="left">7.2</td>
+<td align="left">-</td>
+<td align="left">2.  func (e <em>Store) ListPredicate(ctx context.Context, p storage.SelectionPredicate, options</em>metainternalversion.ListOptions) (runtime.Object, error)（347行）</td>
+<td align="left">-</td>
+<td align="left">-</td>
+</tr>
+<tr>
+<td align="left">8</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;cacher&#x2F;cacher.go</td>
+<td align="left">func (c *Cacher) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object)（633行）</td>
+<td align="left">其上一层调用可以关注DryRunnableStorage</td>
+<td align="left">return c.storage.GetList(ctx, key, opts, listObj)(638行)</td>
+</tr>
+<tr>
+<td align="left">9.1</td>
+<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
+<td align="left">func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object)（524行）</td>
+<td align="left">真实的db操作层入口，可以看到deployments在etcd中对应key为”&#x2F;registry&#x2F;deployments&#x2F;default”</td>
+<td align="left">1.  getResp, err &#x3D; s.client.KV.Get(ctx, key, options…)（660行）</td>
+</tr>
+<tr>
+<td align="left">9.2</td>
+<td align="left">-</td>
+<td align="left">-</td>
+<td align="left">获取对应的value并且反序列化value</td>
+<td align="left">2.  appendListItem(v, data, uint64(kv.ModRevision), pred, s.codec, s.versioner, newItemFunc) (700行)</td>
+</tr>
+</tbody></table>
+<p>&emsp;&emsp;从上面的pod和deployment两个例子看，简单的来说一个RESTful API对应一个Resource，而每个Resource都需要实现rest.Storage接口。</p>
+<p>&emsp;&emsp;当然，上面的例子其实是比较简单的apiserver的实现场景，比较复杂的场景还有使用watch方式监听资源，会用到 http 协议 chunked 机制实现，通过 在header中的Transfer-Encoding: chunked 来实现持续watch，apiserver会启动一个协程周期性的轮训并分段持续接收相应的相应。而对应使用kubectl exec -it 与pod建立交互终端 ,则是使用SPDY协议使得信息可以在单个 TCP 连接进行并发双向收发（好像近期的已经可以使用websocket，具体没有代码层面考证）</p>
+<h1 id="参考附录"><a href="#参考附录" class="headerlink" title="参考附录"></a>参考附录</h1><ol>
+<li><a target="_blank" rel="noopener" href="https://wukaiying.github.io/k8s/kubelet-create-pod-lifecycle/">Kubelet 创建pod流程分析 - Kaiying</a></li>
+<li><a target="_blank" rel="noopener" href="https://cizixs.com/2017/06/07/kubelet-source-code-analysis-part-2/">kubelet 源码分析：pod 新建流程 | Cizixs Write Here</a></li>
+<li><a target="_blank" rel="noopener" href="https://icloudnative.io/posts/what-happens-when-k8s/">kubectl 创建 Pod 背后到底发生了什么？ – 云原生实验室 - Kubernetes|Docker|Istio|Envoy|Hugo|Golang|云原生</a></li>
+<li><a target="_blank" rel="noopener" href="https://erkanerol.github.io/post/how-kubectl-exec-works/">How does ‘kubectl exec’ work? - Blog</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/apiserver-builder-alpha/blob/master/docs/concepts/api_building_overview.md">https://github.com/kubernetes-sigs/apiserver-builder-alpha/blob/master/docs/concepts/api_building_overview.md</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/duyanghao/kubernetes-reading-notes/blob/master/core/api-server/design.md">https://github.com/duyanghao/kubernetes-reading-notes/blob/master/core/api-server/design.md</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/" rel="prev" title="手把手DEBUG(第三篇:pod怎么被调度到一个node上)">
+                  <i class="fa fa-angle-left"></i> 手把手DEBUG(第三篇:pod怎么被调度到一个node上)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/" rel="next" title="手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)">
+                  手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">16k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">58 mins.</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

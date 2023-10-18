@@ -17,21 +17,21 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
 
-    <meta name="description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  第一步得先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以">
+    <meta name="description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以不采用m">
 <meta property="og:type" content="article">
 <meta property="og:title" content="手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)">
 <meta property="og:url" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/index.html">
 <meta property="og:site_name" content="xiaobaidemu">
-<meta property="og:description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  第一步得先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以">
+<meta property="og:description" content="授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。  先有一个自己的k8s集群这里推荐使用kubeadm方式完成kubernetes集群的搭建，之所以不采用m">
 <meta property="og:locale">
 <meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png">
 <meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug1.png">
 <meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug2.png">
 <meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug3.png">
 <meta property="article:published_time" content="2023-10-18T03:45:08.000Z">
-<meta property="article:modified_time" content="2023-10-18T06:44:28.694Z">
+<meta property="article:modified_time" content="2023-10-18T08:45:13.913Z">
 <meta property="article:author" content="xiaobaidemu">
 <meta property="article:tag" content="kubernetes">
 <meta name="twitter:card" content="summary">
@@ -68,6 +68,9 @@
       <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
   <div class="site-nav-toggle">
     <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
     </div>
   </div>
 
@@ -89,6 +92,10 @@
 
 
 
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
 
 
 
@@ -111,7 +118,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%E5%BE%97%E5%85%88%E6%9C%89%E4%B8%80%E4%B8%AA%E8%87%AA%E5%B7%B1%E7%9A%84k8s%E9%9B%86%E7%BE%A4"><span class="nav-number">1.</span> <span class="nav-text">第一步得先有一个自己的k8s集群</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8kubeadm%E6%90%AD%E5%BB%BAk8s%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E4%BA%9B%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.1.</span> <span class="nav-text">使用kubeadm搭建k8s集群的一些注意事项</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8VSCode-Debug-k8s%E7%BB%84%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">使用VSCode Debug k8s组件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver-%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">本地debug编译好的二进制apiserver （推荐）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E7%BC%96%E8%AF%91apiserver"><span class="nav-number">2.1.1.</span> <span class="nav-text">1. 编译apiserver</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E9%85%8D%E7%BD%AEvscode-launch%E6%96%87%E4%BB%B6"><span class="nav-number">2.1.2.</span> <span class="nav-text">2. 配置vscode launch文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%90%AF%E5%8A%A8%E8%B0%83%E8%AF%95"><span class="nav-number">2.1.3.</span> <span class="nav-text">3. 启动调试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9C%E7%A8%8Bdebug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver"><span class="nav-number">2.2.</span> <span class="nav-text">远程debug编译好的二进制apiserver</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%EF%BC%8C%E6%9C%AA%E6%8F%90%E5%89%8D%E7%BC%96%E8%AF%91%E7%9A%84apiserver%EF%BC%88%E4%B8%8D%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">本地debug，未提前编译的apiserver（不推荐）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vscode-debug-kube-scheduler%E9%85%8D%E7%BD%AE"><span class="nav-number">2.4.</span> <span class="nav-text">vscode debug kube-scheduler配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-number">3.</span> <span class="nav-text">附录</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E4%BD%BF%E7%94%A8service-account%E5%88%9B%E5%BB%BAkubeconfig%E7%99%BB%E5%BD%95dashboard"><span class="nav-number">3.1.</span> <span class="nav-text">关于使用service account创建kubeconfig登录dashboard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">3.2.</span> <span class="nav-text">参考资料</span></a></li></ol></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%88%E6%9C%89%E4%B8%80%E4%B8%AA%E8%87%AA%E5%B7%B1%E7%9A%84k8s%E9%9B%86%E7%BE%A4"><span class="nav-text">先有一个自己的k8s集群</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8kubeadm%E6%90%AD%E5%BB%BAk8s%E9%9B%86%E7%BE%A4%E7%9A%84%E4%B8%80%E4%BA%9B%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-text">使用kubeadm搭建k8s集群的一些注意事项</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8VSCode-Debug-k8s%E7%BB%84%E4%BB%B6"><span class="nav-text">使用VSCode Debug k8s组件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver-%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-text">本地debug编译好的二进制apiserver （推荐）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E7%BC%96%E8%AF%91apiserver"><span class="nav-text">1. 编译apiserver</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E9%85%8D%E7%BD%AEvscode-launch%E6%96%87%E4%BB%B6"><span class="nav-text">2. 配置vscode launch文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%90%AF%E5%8A%A8%E8%B0%83%E8%AF%95"><span class="nav-text">3. 启动调试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9C%E7%A8%8Bdebug%E7%BC%96%E8%AF%91%E5%A5%BD%E7%9A%84%E4%BA%8C%E8%BF%9B%E5%88%B6apiserver"><span class="nav-text">远程debug编译好的二进制apiserver</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%AC%E5%9C%B0debug%EF%BC%8C%E6%9C%AA%E6%8F%90%E5%89%8D%E7%BC%96%E8%AF%91%E7%9A%84apiserver%EF%BC%88%E4%B8%8D%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-text">本地debug，未提前编译的apiserver（不推荐）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vscode-debug-kube-scheduler%E9%85%8D%E7%BD%AE"><span class="nav-text">vscode debug kube-scheduler配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-text">附录</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E4%BD%BF%E7%94%A8service-account%E5%88%9B%E5%BB%BAkubeconfig%E7%99%BB%E5%BD%95dashboard"><span class="nav-text">关于使用service account创建kubeconfig登录dashboard</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-text">参考资料</span></a></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -124,7 +131,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">5</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -141,6 +148,10 @@
 
         </div>
       </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
     </div>
 
     
@@ -190,7 +201,7 @@
       <span class="post-meta-item-text">Posted on</span>
       
 
-      <time title="Created: 2023-10-18 11:45:08 / Modified: 14:44:28" itemprop="dateCreated datePublished" datetime="2023-10-18T11:45:08+08:00">2023-10-18</time>
+      <time title="Created: 2023-10-18 11:45:08 / Modified: 16:45:13" itemprop="dateCreated datePublished" datetime="2023-10-18T11:45:08+08:00">2023-10-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -203,6 +214,21 @@
     </span>
 
   
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
 </div>
 
         </div>
@@ -214,10 +240,10 @@
     <div class="post-body" itemprop="articleBody"><blockquote>
 <p>授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。</p>
 </blockquote>
-<h1 id="第一步得先有一个自己的k8s集群"><a href="#第一步得先有一个自己的k8s集群" class="headerlink" title="第一步得先有一个自己的k8s集群"></a>第一步得先有一个自己的k8s集群</h1><p>这里推荐使用<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/">kubeadm</a>方式完成kubernetes集群的搭建，之所以不采用minikube，主要有以下几个原因：</p>
+<h1 id="先有一个自己的k8s集群"><a href="#先有一个自己的k8s集群" class="headerlink" title="先有一个自己的k8s集群"></a>先有一个自己的k8s集群</h1><p>这里推荐使用<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/">kubeadm</a>方式完成kubernetes集群的搭建，之所以不采用minikube，主要有以下几个原因：</p>
 <ol>
 <li>主要是使用kubeadm创建的过程中也是一个复习整个kubernetes集群组件的过程。</li>
-<li>虽然kubeadm在创建集群过程中，都能比较容易得创建集群，但是相对于minikube这种开箱即用的来说，还是有一定繁琐步骤需要自行处理。例如需要选择不同的底层组件（例如CRI和OCI的选择，可以参考<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6.html">从kubernetes中容器生态窥探设计模式的哲学</a>这篇文章）甚至如果有多台机器，可以将在多台机器部署k8s node,在后续学习的时候，可以更真实的理解例如调度的逻辑。</li>
+<li>虽然kubeadm在创建集群过程中，都能比较容易得创建集群，但是相对于minikube这种开箱即用的来说，还是有一定繁琐步骤需要自行处理。例如需要选择不同的底层组件（例如CRI和OCI的选择，可以参考<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6">从kubernetes中容器生态窥探设计模式的哲学</a>这篇文章）甚至如果有多台机器，可以将在多台机器部署k8s node,在后续学习的时候，可以更真实的理解例如调度的逻辑。</li>
 <li>minikube更多的可以帮助一个从没有接触过k8s的人，让其能够通过minikube上手使用k8s，来学习了解k8s的理念。</li>
 <li>因为后续我们会通过将原本的k8s集群中的某一个组件停止，替换为我们自己通过源码的编译的组件，进而对k8s的这个组件进行debug，来学习里面的一些源码，因此知道这些组件的停止启动，部署逻辑是很有必要的，所以kubeadm在这方便是更好的工具。</li>
 </ol>
@@ -342,11 +368,14 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" rel="prev" title="从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境">
-                  <i class="fa fa-angle-left"></i> 从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/" rel="prev" title="手把手DEBUG(第二篇：从一个到达APIServer的请求开始)">
+                  <i class="fa fa-angle-left"></i> 手把手DEBUG(第二篇：从一个到达APIServer的请求开始)
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" rel="next" title="从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境">
+                  从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境 <i class="fa fa-angle-right"></i>
+                </a>
             </div>
           </div>
     </footer>
@@ -372,23 +401,27 @@
     </span>
     <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
   </div>
-  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">16k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">58 mins.</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
   </div>
 
     </div>
   </footer>
 
   
-  <div class="toggle sidebar-toggle" role="button">
-    <span class="toggle-line"></span>
-    <span class="toggle-line"></span>
-    <span class="toggle-line"></span>
-  </div>
-  <div class="sidebar-dimmer"></div>
-  <div class="back-to-top" role="button" aria-label="Back to top">
-    <i class="fa fa-arrow-up fa-lg"></i>
-    <span>0%</span>
-  </div>
 
 <noscript>
   <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
@@ -397,7 +430,7 @@
 
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
-<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
 
   
 
