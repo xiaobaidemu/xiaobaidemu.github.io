@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文围绕k8s中controller这个抽象的组件，来聊聊我是怎么来学习和理解这个非常关键的，并且由多个组件共同构成的控制k8s核心API逻辑的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手DEBUG-第五篇-controller的精妙设计">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="本文围绕k8s中controller这个抽象的组件，来聊聊我是怎么来学习和理解这个非常关键的，并且由多个组件共同构成的控制k8s核心API逻辑的。">
+<meta property="og:locale">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/client-go-controller-interaction.jpg">
+<meta property="article:published_time" content="2023-08-18T16:00:00.000Z">
+<meta property="article:modified_time" content="2023-10-19T09:38:36.037Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="kubernetes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/client-go-controller-interaction.jpg">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/","path":"手把手DEBUG-第五篇-controller的精妙设计/","title":"手把手DEBUG-第五篇-controller的精妙设计"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>手把手DEBUG-第五篇-controller的精妙设计 | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%8Einformer-workqueue%E5%88%B0controller"><span class="nav-text">从informer&#x2F;workqueue到controller</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E7%AE%80%E5%8D%95%E7%9A%84%E6%96%B9%E6%B3%95%E7%90%86%E8%A7%A3informer%E4%B8%AD%E7%9A%84%E7%B4%A2%E5%BC%95indexer"><span class="nav-text">最简单的方法理解informer中的索引indexer</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%84%E7%90%86DeltaFIFO%E4%B8%AD%E7%9A%84%E5%A2%9E%E5%88%A0%E6%94%B9%E6%B6%88%E6%81%AF"><span class="nav-text">处理DeltaFIFO中的增删改消息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8Eworkqueue%E6%9D%A5%E7%9C%8Bcontroller%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-text">从workqueue来看controller的设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%9A%E7%94%A8%E9%98%9F%E5%88%97"><span class="nav-text">通用队列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BB%B6%E6%97%B6%E9%98%9F%E5%88%97"><span class="nav-text">延时队列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%99%90%E9%80%9F%E9%98%9F%E5%88%97"><span class="nav-text">限速队列</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%98%E6%96%B9controller-sample%E6%B5%85%E6%9E%90"><span class="nav-text">官方controller sample浅析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AddEventHandler"><span class="nav-text">AddEventHandler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#processNextWorkItem"><span class="nav-text">processNextWorkItem</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#syncHandler"><span class="nav-text">syncHandler</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%99%84%E5%BD%95"><span class="nav-text">附录</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="手把手DEBUG-第五篇-controller的精妙设计 | xiaobaidemu">
+      <meta itemprop="description" content="本文围绕k8s中controller这个抽象的组件，来聊聊我是怎么来学习和理解这个非常关键的，并且由多个组件共同构成的控制k8s核心API逻辑的。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手DEBUG-第五篇-controller的精妙设计
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-19 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-19T00:00:00+08:00">2023-08-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>5.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>22 mins.</span>
+    </span>
+</div>
+
+            <div class="post-description">本文围绕k8s中controller这个抽象的组件，来聊聊我是怎么来学习和理解这个非常关键的，并且由多个组件共同构成的控制k8s核心API逻辑的。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="从informer-workqueue到controller"><a href="#从informer-workqueue到controller" class="headerlink" title="从informer&#x2F;workqueue到controller"></a>从informer&#x2F;workqueue到controller</h1><p>informer直译为告密者，所以正如字面意思理解，它会监听k8s中各种API对象的变化，然后将监听到的信息，告诉后面的处理逻辑执行相应的处理。</p>
+<p>informer中一个很重要的抽象叫做Reflector，它是informer架构中的一个关键组件。它是负责从 API 服务器监听资源对象的变更事件（如添加、更新和删除），并将这些变化被同步到本地的存储（如 DeltaFIFO 队列和 Indexer，后面会提到）并且支持通过回调的方式在执行用户自定义的事件处理函数。</p>
+<p>informer这个架构，可以在k8s.io&#x2F;client-go&#x2F;informers中看到他的源码，由于client-go中的examples中已经提供了很多示例，我这里提供一个方便debug的非常简单的代码（主要是为了方便通过断点调试进行走读）</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;flag&quot;</span></span><br><span class="line">    <span class="string">&quot;fmt&quot;</span></span><br><span class="line">    <span class="string">&quot;path/filepath&quot;</span></span><br><span class="line">    <span class="string">&quot;time&quot;</span></span><br><span class="line"></span><br><span class="line">    appsv1 <span class="string">&quot;k8s.io/api/apps/v1&quot;</span></span><br><span class="line">    metav1 <span class="string">&quot;k8s.io/apimachinery/pkg/apis/meta/v1&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/apimachinery/pkg/util/runtime&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/client-go/informers&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/client-go/kubernetes&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/client-go/tools/cache&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/client-go/tools/clientcmd&quot;</span></span><br><span class="line">    <span class="string">&quot;k8s.io/client-go/util/homedir&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">var</span> kubeconfig *<span class="type">string</span></span><br><span class="line">    <span class="keyword">if</span> home := homedir.HomeDir(); home != <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">        kubeconfig = flag.String(<span class="string">&quot;kubeconfig&quot;</span>, filepath.Join(home, <span class="string">&quot;.kube&quot;</span>, <span class="string">&quot;config&quot;</span>), <span class="string">&quot;(optional) absolute path to the kubeconfig file&quot;</span>)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        kubeconfig = flag.String(<span class="string">&quot;kubeconfig&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;absolute path to the kubeconfig file&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    flag.Parse()</span><br><span class="line"></span><br><span class="line">    config, err := clientcmd.BuildConfigFromFlags(<span class="string">&quot;&quot;</span>, *kubeconfig)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(err)</span><br><span class="line">    &#125;</span><br><span class="line">    clientset, err := kubernetes.NewForConfig(config)</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(err)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// deploymentsClient := clientset.AppsV1().Deployments(apiv1.NamespaceDefault)</span></span><br><span class="line">    <span class="comment">// 创建一个 SharedInformerFactory，以便于创建 informer。</span></span><br><span class="line">    watchNamespace := <span class="string">&quot;default&quot;</span></span><br><span class="line">    <span class="comment">// 一个自定义的本地索引，下面indexer章节会叙述</span></span><br><span class="line">    indexFunc := <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> ([]<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">        deployment := obj.(*appsv1.Deployment)</span><br><span class="line">        app := deployment.Labels[<span class="string">&quot;app&quot;</span>]</span><br><span class="line">        <span class="keyword">return</span> []<span class="type">string</span>&#123;app&#125;, <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 这里我们设置一个informerFactory，表示仅监听指定命名空间和指定label的对象，通过这个工厂，可以创建对具体某一个API对象的监控，通过factory来创建各类API对象的informer可以节约很多计算网络资源，有效减少本地和远程apiserver的压力</span></span><br><span class="line">    <span class="comment">// 在debug时候，可以设置informer的同步周期为非常大，避免频繁同步造成debug在频繁在多个goroutine中切换影响debug过程中代码走读</span></span><br><span class="line"></span><br><span class="line">    factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Hour*<span class="number">10</span>, informers.WithNamespace(watchNamespace),</span><br><span class="line">        informers.WithTweakListOptions(<span class="function"><span class="keyword">func</span><span class="params">(options *metav1.ListOptions)</span></span> &#123;</span><br><span class="line">            options.LabelSelector = <span class="string">&quot;app=label-test&quot;</span></span><br><span class="line">        &#125;))</span><br><span class="line">    <span class="comment">// 创建一个 Deployment informer，用于监视集群中 Deployment 资源的变化。</span></span><br><span class="line">    deploymentInformer := factory.Apps().V1().Deployments().Informer()</span><br><span class="line">    deploymentInformer.AddIndexers(cache.Indexers&#123;<span class="string">&quot;app&quot;</span>: indexFunc&#125;)</span><br><span class="line">    <span class="comment">// 为 Deployment informer 添加事件处理器，处理资源添加、更新和删除事件。</span></span><br><span class="line">    deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs&#123;</span><br><span class="line">        AddFunc: <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">            deployment := obj.(*appsv1.Deployment)</span><br><span class="line">            fmt.Printf(<span class="string">&quot;Deployment added: %s, %s, %+v\n&quot;</span>, deployment.GetName(), deployment.GetResourceVersion(), deployment.Status)</span><br><span class="line">        &#125;,</span><br><span class="line">        UpdateFunc: <span class="function"><span class="keyword">func</span><span class="params">(oldObj, newObj <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">            indexer := deploymentInformer.GetIndexer()</span><br><span class="line">            deployment1, _ := indexer.ByIndex(<span class="string">&quot;namespace&quot;</span>, <span class="string">&quot;default&quot;</span>)</span><br><span class="line">            obj1 := deployment1[<span class="number">0</span>].(*appsv1.Deployment)</span><br><span class="line">            fmt.Printf(<span class="string">&quot;before !!!!!!!!!!!!!!!!!!!!! %+v\n&quot;</span>, obj1.DeletionTimestamp)</span><br><span class="line">        &#125;,</span><br><span class="line">        DeleteFunc: <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">            deployment := obj.(*appsv1.Deployment)</span><br><span class="line">            fmt.Printf(<span class="string">&quot;Deployment deleted: %s, %s, %+v\n&quot;</span>, deployment.GetName(), deployment.GetResourceVersion(), deployment.Status)</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="comment">// 启动 informer，开始监视集群中 Deployment 资源的变化。</span></span><br><span class="line">    stopCh := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">struct</span>&#123;&#125;)</span><br><span class="line">    <span class="keyword">defer</span> <span class="built_in">close</span>(stopCh)</span><br><span class="line">    <span class="keyword">defer</span> runtime.HandleCrash()</span><br><span class="line"></span><br><span class="line">    factory.Start(stopCh) <span class="comment">// 直接阻塞，不使用协程方便debug</span></span><br><span class="line">    <span class="comment">// 无限循环，直到程序被中断。</span></span><br><span class="line">    &lt;-stopCh</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>代码默认会读取本地的$HOME&#x2F;.kube&#x2F;config配置，用于在集群外连接apiserver。vscode launch配置如下</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;version&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0.2.0&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;configurations&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">&#123;</span></span><br><span class="line">            <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;client-go informer-demo debug&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;go&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;request&quot;</span><span class="punctuation">:</span> <span class="string">&quot;launch&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;mode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;debug&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;program&quot;</span><span class="punctuation">:</span> <span class="string">&quot;$&#123;workspaceFolder&#125;/staging/src/k8s.io/client-go/examples/informer-demo&quot;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;args&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;env&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;showLog&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span><span class="punctuation">,</span></span><br><span class="line">            <span class="attr">&quot;trace&quot;</span><span class="punctuation">:</span> <span class="string">&quot;verbose&quot;</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>上述代码中，并没有显示的声明一个Reflector,这是因为它更多是informer的内部实现的一部分，在实际应用中，使用SharedInformer 或 InformerFactory，以便更方便地管理多个资源类型和事件处理器。这些组件在内部使用 Reflector 来同步数据，但提供了更高级的功能，如自动管理 Reflector 实例、共享缓存和多路复用 Watch 连接等。通过使用 SharedInformer 或 InformerFactory，以便轻松地处理多个 API 资源，而无需手动创建和管理 Reflector 实例。</p>
+<p>这里我们通过创建一个label为app&#x3D;label-test的deployment。然后再启动debug程序，来对代码走读。下面是一些关键的debug点，可以通过这些debug理解，informer在监听过程中内部的具体实现。</p>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left"></th>
+<th align="left"></th>
+<th align="left"></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">1</td>
+<td align="left">staging&#x2F;src&#x2F;k8s.io&#x2F;client-go&#x2F;tools&#x2F;cache&#x2F;reflector.go</td>
+<td align="left">func (r *Reflector) ListAndWatch(stopCh &lt;-chan struct{}) error</td>
+<td align="left">首先拉取所有Reflector中指定的需要监听的k8s资源对象，同时开启两个协程：1. 其中一个协程根据用户设定的周期时间，定期触发拉取全量的k8s监听资源 2. 另一个协程主要是创建一个stream监听流（ 如果是HTTP&#x2F;2 在 则利用<font color=red>Server-Push、Multiplexing 上的高性能 Stream 特性</font>，在实现 RESTful Watch ）此流就是通过下面2中面熟的newStreamWatcher创建的</td>
+</tr>
+<tr>
+<td align="left">2</td>
+<td align="left">staging&#x2F;src&#x2F;k8s.io&#x2F;client-go&#x2F;rest&#x2F;request.go</td>
+<td align="left">func (r <em>Request) newStreamWatcher(resp</em>http.Response) (watch.Interface, error)</td>
+<td align="left">创建出来的流是一个high level的抽象，其底层实现了Decoder:从网络的io.Reader解析二进制字节流，并将其组装成json.同时通过channel方式将此对象由channel传递到informer DeltaFIFO中（DeltaFIFO下文来解释）<p> (关于具体如何接收二进制并且拼装数据，可以断点staging&#x2F;src&#x2F;k8s.io&#x2F;apimachinery&#x2F;pkg&#x2F;util&#x2F;framer&#x2F;framer.go-&gt;Read函数)</td>
+</tr>
+<tr>
+<td align="left">3</td>
+<td align="left">staging&#x2F;src&#x2F;k8s.io&#x2F;client-go&#x2F;tools&#x2F;cache&#x2F;reflector.go</td>
+<td align="left">func (r *Reflector) list(stopCh &lt;-chan struct{}) error</td>
+<td align="left">从apiserver中获取所有informer中指定所有对象，由于上述代码中informer是针对development，所以会在启动informer前获取所有的development对象信息</td>
+</tr>
+</tbody></table>
+<p><font color=#0099ff>当然Reflector 中的 Watch 能力的根源来自于 etcd 支持监听变化。</font>Kubernetes 使用 etcd 作为其主要的数据存储，etcd 提供了一种高效的机制来监听存储中数据的变化。etcd 中的 watch API 允许客户端订阅一个或多个键（key）的变化。当这些键的值发生变化（例如，添加、修改或删除）时，etcd 会将相应的事件发送给客户端。这使得客户端可以实时了解存储中数据的变化，而无需频繁地轮询 etcd。</p>
+<p>至此启动informer后首轮拉取全量监听的资源，以及创建监听资源变化的watch stream流已经完成。之后我们可以直接执行，kubectl delete demployment <deployment_name>操作，可以进一步观察informer收到watch流中的数据，并更新indexer，以及触发用户自定义的操作。</p>
+<p>删除操作触发后，deployment最先感知到的是Updated，这里会涉及到感知到deployment例如status等变化，然后全量更新cache中对应资源的信息，<font color=red>以及相应的索引信息</font>。</p>
+<h2 id="最简单的方法理解informer中的索引indexer"><a href="#最简单的方法理解informer中的索引indexer" class="headerlink" title="最简单的方法理解informer中的索引indexer"></a>最简单的方法理解informer中的索引indexer</h2><p>索引本质上很简单，可以理解为是以下3个map的组合。</p>
+<table>
+<thead>
+<tr>
+<th align="left">map对象名</th>
+<th align="left">key</th>
+<th align="left">value</th>
+<th align="left">备注</th>
+<th align="left">用golang结构理解</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">indexers</td>
+<td align="left">自定义的字符串任意字符串，代表这个<font color=red>索引类名</font></td>
+<td align="left">函数：type IndexFunc func(obj interface{}) ([]string, error) <p> 根据任意对象(可以是k8s中的对象)，生成多个索引值</td>
+<td align="left">一个indexers中可以包含多个kv，也就是说可以包含多种索引的生成方式。不同的kv代表不同的索引生成方式。默认的每个informer中都会包含一个key为namespace的索引类名，其value就是可以根据k8s对象返回命名空间值的函数IndexFunc。</td>
+<td align="left">map[string]indexFunc</td>
+</tr>
+<tr>
+<td align="left">indices</td>
+<td align="left">同indexers<p> 自定义的字符串任意字符串，代表这个<font color=red>索引类名 </font></td>
+<td align="left">value也是一个map，此map的key就包含了相同索引类名中对应上述indexers中的indexFunc生成的所有索引值</td>
+<td align="left">indexers和indices是一一对应的，也就是存在于indexer的key中的索引类名，一定存在于indices的key中</td>
+<td align="left">map[string]Index <p>  type Index map[string]sets.String <p> type String map[string]struct{} <p> 其中Index中的key就是indexers中indexFunc生成的索引值，而后面的sets.String就是这个对应的索引值中包含的所有对象键(见下面的items)</td>
+</tr>
+<tr>
+<td align="left">items</td>
+<td align="left">k8s资源对象生成的代表某一个对象的<font color=red>对象键<font></td>
+<td align="left">对象键对应interface{},例如deployment就代表的是k8s.io&#x2F;api&#x2F;apps&#x2F;v1.Deployment</td>
+<td align="left">每个存在于上面Index的sets.String中的对象键，都可以在items中定位到。对象键名默认是<namespace>&#x2F;&lt;api对象名&gt;组成</td>
+<td align="left">map[string]interface{}</td>
+</tr>
+</tbody></table>
+<p>我们也可以自己定义indexer，下面的代码是一个自定义的Indexers，支持根据deployment对象中的label中key为”app”的value值作为索引键，并将这个构建索引的方式命名为”app”这个索引类名。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">indexFunc := <span class="function"><span class="keyword">func</span><span class="params">(obj <span class="keyword">interface</span>&#123;&#125;)</span></span> ([]<span class="type">string</span>, <span class="type">error</span>) &#123;</span><br><span class="line">       deployment := obj.(*appsv1.Deployment)</span><br><span class="line">    app := deployment.Labels[<span class="string">&quot;app&quot;</span>]</span><br><span class="line">       <span class="keyword">return</span> []<span class="type">string</span>&#123;app&#125;, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line">factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Hour*<span class="number">10</span>, informers.WithNamespace(watchNamespace),</span><br><span class="line">       informers.WithTweakListOptions(<span class="function"><span class="keyword">func</span><span class="params">(options *metav1.ListOptions)</span></span> &#123;</span><br><span class="line">        <span class="comment">// 这里我们简化逻辑只监听符合app=label-test这个标签的api对象</span></span><br><span class="line">              options.LabelSelector = <span class="string">&quot;app=label-test&quot;</span></span><br><span class="line">       &#125;))</span><br><span class="line"><span class="comment">// 创建一个 Deployment informer，用于监视集群中 Deployment 资源的变化。</span></span><br><span class="line">deploymentInformer := factory.Apps().V1().Deployments().Informer()</span><br><span class="line">deploymentInformer.AddIndexers(cache.Indexers&#123;<span class="string">&quot;app&quot;</span>: indexFunc&#125;)</span><br><span class="line"><span class="comment">// 设置EventHandeler/启动informer开始监听......</span></span><br><span class="line">indexer := deploymentInformer.GetIndexer()</span><br><span class="line"><span class="comment">// 从索引类名为app索引中，找到索引值为label-test的所有对象</span></span><br><span class="line">deployments, _ := indexer.ByIndex(<span class="string">&quot;app&quot;</span>, <span class="string">&quot;label-test&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>结合上面的代码，假如我们创建了一个名为demo-deploymen的Deployment对象，且label为”app&#x3D;label-test”的对象，我们用一个表格来展示这个代码运行时，三个索引对象中的内容</p>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left"></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">indexers</td>
+<td align="left">{“app”:indexFunc; “namespace”: MetaNamespaceIndexFunc} &#x2F;&#x2F; 其中后面的namespace是默认包含的索引方式</td>
+</tr>
+<tr>
+<td align="left">indices</td>
+<td align="left">{<p>app”: {“label-test”: set([“default&#x2F;demo-deployment”,”.&lt;其他对象键&gt;”])} <p> “namespace”: {“default”: set([“default&#x2F;demo-deployment”,”&lt;其他对象键&gt;”])}<p>}</td>
+</tr>
+<tr>
+<td align="left">items</td>
+<td align="left">{“default&#x2F;demo-deployment”: &lt;api对象&gt;，”&lt;其他对象键&gt;”: &lt;api对象&gt;}</td>
+</tr>
+</tbody></table>
+<h2 id="处理DeltaFIFO中的增删改消息"><a href="#处理DeltaFIFO中的增删改消息" class="headerlink" title="处理DeltaFIFO中的增删改消息"></a>处理DeltaFIFO中的增删改消息</h2><p><font color=RoyalBlue>DeltaFIFO 是 Informer 架构的一个关键组件</font>，主要作用是确保事件处理器（event handlers）按照正确的顺序处理资源对象的添加、修改和删除事件。当 Reflector 从 API 服务器接收到资源对象的变化时，它会将这些对象添加到 DeltaFIFO 中。DeltaFIFO 会为每个对象维护一个队列，其中包含该对象的一系列变化（称为 Delta）。</p>
+<p>DeltaFIFO 提供了一种名为 Pop 的方法，用于获取并处理下一个待处理的资源对象。Pop 方法会按照资源对象在队列中的顺序处理它们的变化，并将这些变化传递给事件处理器。这确保了事件处理器按照正确的顺序处理资源对象的添加、修改和删除事件。</p>
+<p>Delta中定义了5种对象变更类型（Sync&#x2F;Replaced&#x2F;Added&#x2F;Updated&#x2F;Delete）但是本质上在处理过程中只有下表列出的三种处理过程。</p>
+<p>另外需要注意的是<font color=RoyalBlue>Kubernetes API 服务器会将整个对象的新状态发送给 watch 客户端。因此，Informer 接收到的是整个对象的变化，而不是增量变化</font>。然而，在处理这些变化时，事件处理函数会比较新旧对象，以确定发生了哪些具体变化。例如OneUpdate</p>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left"></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">OnUpdate(oldObj, newObj interface{})</td>
+<td align="left">当监听到变化的对象存在于内存缓存(Store)中，获取old状态，然后直接更新Store中改对象的信息。</td>
+</tr>
+<tr>
+<td align="left">OnAdd(obj interface{})</td>
+<td align="left">当监听到变化的对象不存在于内存缓存(Store)中，则在Store中新增对象。</td>
+</tr>
+<tr>
+<td align="left">Deleted(obj interface{})</td>
+<td align="left">从Store中删除对应的对象</td>
+</tr>
+</tbody></table>
+<p>需要注意的是用户常常使用的是SharedFactory创建的informer,而不会直接对Delta进行操作，如果使用sharedInformer监听事件，那上面的三个函数<font color=red>并非在监听到事件后直接执行用户在informer中注册的增删改行为</font>，而是将这个通知动作通过channel 1 写入一个无界环形缓冲区，然后在无限读取这个缓冲区的通知信息，写入到channel2. 同时另一个协程持续性的监听并读取channel2的消息，每当读取到一个消息，然后执行用户注册的函数，可以发现<font color=red>执行用户注册的EventHandler的过程都是串行执行的</font>。那么当需要监听的api对象非常多的时候，势必会很多性能问题，甚至导致检测到的变化延迟过大。这个时候就需要下面要说的的<font color=red>workqueue</font>来缓解这种情况。</p>
+<p>上面的设计和实现是一个非常巧妙的实现，通过两个协程+两个channel+一个无界环形缓冲区，完成了一个简单的消息的缓冲处理，这种设计可以用来很多的队列优化上.</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// processorListener 通过两个协程+两个channel+一个无界环形缓冲区，完成了一个简单的消息的缓冲处理。</span></span><br><span class="line"><span class="comment">// k8s.io/client-go/tools/cache/shared_informer.go</span></span><br><span class="line"><span class="keyword">type</span> processorListener <span class="keyword">struct</span> &#123;</span><br><span class="line">    nextCh <span class="keyword">chan</span> <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">    addCh  <span class="keyword">chan</span> <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">    handler ResourceEventHandler</span><br><span class="line">        pendingNotifications buffer.RingGrowing</span><br><span class="line">        .....</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 协程1 持续从addCh中获取消息，并写入到缓冲区中，然后再依次从缓冲区中提取一个消息写入nextCh</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *processorListener)</span></span> pop() &#123;...&#125;</span><br><span class="line"><span class="comment">// 协程2 持续从nextCh获取消息，处理用户注册的eventhandler</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(p *processorListener)</span></span> run() &#123;</span><br></pre></td></tr></table></figure>
+
+<h2 id="从workqueue来看controller的设计"><a href="#从workqueue来看controller的设计" class="headerlink" title="从workqueue来看controller的设计"></a>从workqueue来看controller的设计</h2><p>informer本身不包含workqueue的设计，本质上在接收到ADD&#x2F;Update&#x2F;Delete动作后，执行AddEventHandler中注册的行为即可，但是注册进addHandler中的函数本身是串行执行的，所以如果不使用一些队列模型很难做到高并发的处理。workqueue的这也是可以在各类controller控制器中用途非常多的一个组件。</p>
+<p>workqueue包括多种类型，从通用类型，到支持重试的队列类型，可以用在很多其他系统中，用来优化整个系统。</p>
+<h3 id="通用队列"><a href="#通用队列" class="headerlink" title="通用队列"></a>通用队列</h3><p>k8s.io&#x2F;client-go&#x2F;util&#x2F;workqueue&#x2F;rate_limiting_queue&#x2F;queue.go</p>
+<p>一个通用的FIFO队列，但是区别于最简单的由纯数组构成的队列，这个队列添加两个set对象（<font color=RoyalBlue>正在处理的对象集合processing和所有需要被处理的对象集合dirty</font>）。<br>因为队列主要与informer和controller搭配使用，所以一个k8s对象会频繁的监听到变化，因为会常常有这种情况，controller正在处理某一个对象时，有可能监听到多个Update进入到队列。通过用两个set，可以有效的减少对同一个对象短时间频繁执行reconcile操作（下面的”数组”表示用于存放先入先出的数据的结构）</p>
+<p>Add: 入队的时候： 1. 存在于dirty则不再写入数组 2: 不存在于dirty则要写入到dirty集合中，表示再次入队，而如果同时又存在在processing中，则不用在写入到数组中（原因可以看下面的Done的分析）</p>
+<p>Get：从队列数组中弹出第一个元素，并从插入到processing中，表示开始处理，同时从dirty中删除。</p>
+<p>Done：表示任务处理完成，需要从processing集合中删除。同时删除后判断是否该对象仍然出现在dirty集合中，如果存在说明在处理过程中又一次通过ADD加入，需要再次被放入到数组中。可以想想如果不用这两个额外的set，<font color=RoyalBlue>假如在某次处理过程中，监听到该对象变化了非常多次，那么该对象会入队多次，后面又会执行非常多次，而如果有了这两个set，即使监听到了多次变化，后续也只会再执行一次reconcile操作</font></p>
+<h3 id="延时队列"><a href="#延时队列" class="headerlink" title="延时队列"></a>延时队列</h3><p>k8s.io&#x2F;client-go&#x2F;util&#x2F;workqueue&#x2F;delaying_queue.go</p>
+<p>延时队列是在通用队列的基础上增加一个能力，可以通过<font color=Red>AddAfter</font>方法，指定多长时间再入队列，这种方法可以指定某一个处理失败的项目在指定时间后再进行重试，有效避免短时间多次重试。</p>
+<p>其本质是在通用队列的基础上，<font color=Red>增加了一个最小堆，堆顶是一个距离当前时间最近的需要需要入队的item</font>，通过在一个协程waitingLoop()持续循环，监测最小堆的堆顶元素的入队时间是否已经到达，如果已经达到入队时间，则从最小堆弹出堆顶元素，加入到通用队列中。</p>
+<h3 id="限速队列"><a href="#限速队列" class="headerlink" title="限速队列"></a>限速队列</h3><p>k8s.io&#x2F;client-go&#x2F;util&#x2F;workqueue&#x2F;rate_limiting_queue.go</p>
+<p>限速队列又是在延迟队列的基础上增加了一个限速器。限速器可以指导延迟队列，告诉延迟队列执行<font color=Red>AddAfter</font>操作的时候，具体应该等待多久(也就是设置的时间参数是多大)。</p>
+<p>常见的限速器：</p>
+<ol>
+<li><p>ItemExponentialFailureRateLimiter（指数退避限速：记录每一个入队元素的错误次数，进而根据失败次数，逐步延长重试的间隔）</p>
+</li>
+<li><p>BucketRateLimiter （基于golang原生的rate实现，相当于内嵌了一个恒定速率的限速器）</p>
+</li>
+</ol>
+<h2 id="官方controller-sample浅析"><a href="#官方controller-sample浅析" class="headerlink" title="官方controller sample浅析"></a>官方controller sample浅析</h2><p>在k8s.io&#x2F;sample-controller中有一个官方的controller说明，非常清晰的说明了controller的开发。controller本质上是informer和workqueue的组合，通过informer高效的监听所需要的API资源状态以及变化而不至于对apiserver造成过大负载，同时通过workqueue以及不同的队列模式，稳步高效处理api对象。下面这个经典的被很多博客所描述的图就是来自于<a target="_blank" rel="noopener" href="https://github.com/kubernetes/sample-controller/blob/master/docs/images/client-go-controller-interaction.jpeg">https://github.com/kubernetes/sample-controller/blob/master/docs/images/client-go-controller-interaction.jpeg</a><br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/client-go-controller-interaction.jpg" alt="controller"></p>
+<p>这个sample-controller主要是完成了对名为<font color=red>Foo的CRD资源</font>的监听和控制。下面阐述一下要完成一个这个controller的实现要具体完成什么事情。下面的阐述以<a target="_blank" rel="noopener" href="https://github.com/kubernetes/sample-controller/tree/master">GitHub - kubernetes&#x2F;sample-controller: Repository for sample controller. Complements sample-apiserver</a>中代码作实例。</p>
+<ol>
+<li>创建一个名为Foo的CRD资源（CRD可以用于管理数据库的实例，或者由k8s原语组成的更高抽象的资源）</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 参考https://github.com/kubernetes/sample-controller/blob/master/artifacts/examples/crd-status-subresource.yaml</span></span><br><span class="line">kubectl create -f artifacts/examples/crd-status-subresource.yaml</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>根据定义的CRD，完成相关types.go和doc.go的编写，types.go就包含了如下。Foo结构体必须含有基础的TypeMeta和ObjectMeta对象，Spec和Status为用户定义的信息。其中&#x2F;&#x2F; +tag_name&#x3D;tag_value 主要是服务于后面自动代码生成</li>
+</ol>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> v1alpha1</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    metav1 <span class="string">&quot;k8s.io/apimachinery/pkg/apis/meta/v1&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment">// +genclient</span></span><br><span class="line"><span class="comment">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Foo is a specification for a Foo resource</span></span><br><span class="line"><span class="keyword">type</span> Foo <span class="keyword">struct</span> &#123;</span><br><span class="line">    metav1.TypeMeta   <span class="string">`json:&quot;,inline&quot;`</span></span><br><span class="line">    metav1.ObjectMeta <span class="string">`json:&quot;metadata,omitempty&quot;`</span></span><br><span class="line"></span><br><span class="line">    Spec   FooSpec   <span class="string">`json:&quot;spec&quot;`</span></span><br><span class="line">    Status FooStatus <span class="string">`json:&quot;status&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// FooSpec is the spec for a Foo resource</span></span><br><span class="line"><span class="keyword">type</span> FooSpec <span class="keyword">struct</span> &#123;</span><br><span class="line">    DeploymentName <span class="type">string</span> <span class="string">`json:&quot;deploymentName&quot;`</span></span><br><span class="line">    Replicas       *<span class="type">int32</span> <span class="string">`json:&quot;replicas&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// FooStatus is the status for a Foo resource</span></span><br><span class="line"><span class="keyword">type</span> FooStatus <span class="keyword">struct</span> &#123;</span><br><span class="line">    AvailableReplicas <span class="type">int32</span> <span class="string">`json:&quot;availableReplicas&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// FooList is a list of Foo resources</span></span><br><span class="line"><span class="keyword">type</span> FooList <span class="keyword">struct</span> &#123;</span><br><span class="line">    metav1.TypeMeta <span class="string">`json:&quot;,inline&quot;`</span></span><br><span class="line">    metav1.ListMeta <span class="string">`json:&quot;metadata&quot;`</span></span><br><span class="line"></span><br><span class="line">    Items []Foo <span class="string">`json:&quot;items&quot;`</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>同时必须要有一个doc.go（如果没有doc.go，后续的自动代码生成工具无法生成zz_generated.deepcopy.go相关文件），用于告知自动生成脚本生成的对象基本信息（例如groupName等）</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// +k8s:deepcopy-gen=package,register</span></span><br><span class="line"><span class="comment">// +groupName=samplecontroller.k8s.io</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Package v1alpha1 is the v1alpha1 version of the API.</span></span><br><span class="line"><span class="keyword">package</span> v1alpha1 <span class="comment">// import &quot;k8s.io/sample-controller/pkg/apis/samplecontroller/v1alpha1&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>文件的所在的层次目录如下</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">- pkg</span><br><span class="line">    - apis/samplecontroller // samplecontroller就是我们定义的这个CRD</span><br><span class="line">       - v1alpha1 // groupname的version，根据预定一个对象group可以包含不同的版本</span><br><span class="line">           - doc.go</span><br><span class="line">           - types.go</span><br><span class="line">           - zz_generated.deepcopy.go // 待生成的文件</span><br><span class="line">       - register.go // 包含samplecontroller这个CRD在k8s中的groupname常量名称</span><br><span class="line">    - generated // 这个目录下面的目录均是通过代码生成脚本生成的</span><br><span class="line">        - clientset</span><br><span class="line">        - informers</span><br><span class="line">        - listers</span><br><span class="line">- hack</span><br><span class="line">    - update-codegen.sh </span><br></pre></td></tr></table></figure>
+
+<p>然后我们可以执行hack&#x2F;update-codegen.sh脚本生成 pkg&#x2F;apis&#x2F;samplecontroller&#x2F;v1alpha1&#x2F;zz_generated.deepcopy.go和pkg&#x2F;generated代码。后者就是上文中informer方式监听CRD对象时用到的组件。</p>
+<ol start="3">
+<li>撰写controller。官方的例子非常简单，其定义了一个Kind为Foo这个CRD对象（可以通过kubectl get Foo 查看所有创建的Foo实例），一个Foo对象就是一个deployment，当controller监听到一个Foo对象的创建&#x2F;修改, 则对应的着创建&#x2F;修改deployment对象。</li>
+</ol>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Controller <span class="keyword">struct</span> &#123;</span><br><span class="line">    <span class="comment">// kubeclientset is a standard kubernetes clientset</span></span><br><span class="line">    kubeclientset kubernetes.Interface</span><br><span class="line">    <span class="comment">// sampleclientset is a clientset for our own API group</span></span><br><span class="line">    sampleclientset clientset.Interface</span><br><span class="line"></span><br><span class="line">    deploymentsLister appslisters.DeploymentLister</span><br><span class="line">    deploymentsSynced cache.InformerSynced</span><br><span class="line">    foosLister        listers.FooLister</span><br><span class="line">    foosSynced        cache.InformerSynced</span><br><span class="line"></span><br><span class="line">    <span class="comment">// workqueue is a rate limited work queue. This is used to queue work to be</span></span><br><span class="line">    <span class="comment">// processed instead of performing it as soon as a change happens. This</span></span><br><span class="line">    <span class="comment">// means we can ensure we only process a fixed amount of resources at a</span></span><br><span class="line">    <span class="comment">// time, and makes it easy to ensure we are never processing the same item</span></span><br><span class="line">    <span class="comment">// simultaneously in two different workers.</span></span><br><span class="line">    workqueue workqueue.RateLimitingInterface</span><br><span class="line">    <span class="comment">// recorder is an event recorder for recording Event resources to the</span></span><br><span class="line">    <span class="comment">// Kubernetes API.</span></span><br><span class="line">    recorder record.EventRecorder</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>上面就是用于Foo的Controller包含的信息，因为同时要监听Foo实例以及要根据Foo实例的变化创建Deployment，也就是要同时操作两类API，一个是我们自己定义的API对象Foo，另一个就是要操作k8s原生的API对象Deployment，所以sampleclientset和foosLister用于操作我们自定义的API对象，而kubeclientset&#x2F;deploymentsLister用于操作标准的k8s对象(deployment)。</p>
+<p>另外workqueue存在的目的就是有效限制同时处理多个资源的速度，避免对apiserver或者系统其他组件造成负载。</p>
+<p>根据上面的informer和workqueue解析，一个controller最基本的两个操作就是设置Informer的EventHandler以及设置工作协程持续读取队列内容处理。下面对controller中最重要的三个函数进行一些说明</p>
+<h3 id="AddEventHandler"><a href="#AddEventHandler" class="headerlink" title="AddEventHandler"></a>AddEventHandler</h3><p>fooInformer.Informer().AddEventHandler  主要用于在监听到Foo的CR(Custom Resource)对象的增&#x2F;改事件（为什么例子中没有删除，后文会提）将<font color=red>最新的Foo实例对象对应的key放入限速队列</font>）</p>
+<h3 id="processNextWorkItem"><a href="#processNextWorkItem" class="headerlink" title="processNextWorkItem"></a>processNextWorkItem</h3><p>被持续循环执行的函数，这个函数就做了三个事情</p>
+<ol>
+<li>从workqueue中取出一个Foo对象</li>
+<li>执行syncHandler，syncHandler是一个reconcile过程，对比当前状态和期望的状态<br>   如果执行失败，则需要重试，主动执行c.workqueue.AddRateLimited(key)重新写入延迟队列</li>
+<li>无论2是否成功，执行 c.workqueue.Done(obj)表示本次的处理完成</li>
+</ol>
+<h3 id="syncHandler"><a href="#syncHandler" class="headerlink" title="syncHandler"></a>syncHandler</h3><p>在syncHandler函数中，主要有以下几种情况</p>
+<ol>
+<li>查询对应的Foo对象对应的deployment是否存在，如果不存在则根据Foo中Spec中指定的replicas创建对应的Deployment</li>
+<li>如果当前Foo所创建的Deployment中deployment.Spec.Replicas!&#x3D;foo.Spec.Replicas，则表示用户可能修改了Foo的定义，需要同时修改deployment的Spec.Replicas<br>执行c.kubeclientset.AppsV1().Deployments(foo.Namespace).Update(context.TODO(), newDeployment(foo), metav1.UpdateOptions{})</li>
+<li>最后更新Foo.Status中的AvailableReplicas为当前Foo对应的Deployment中<font color=red>deployment.Status.AvailableReplicas</font></li>
+</ol>
+<p>如果任何一环出现错误，则直接进行return err，processNextWorkItem会重新将Foo对象入队，等待一段时间自动触发执行，这里最重要的就是要保证syncHandler是一个幂等的函数，无论执行多少次都不应该有副作用</p>
+<p>这里不知道你有没有一个疑惑，<font color=RoyalBlue>为什么没有设置对Foo这个CRD的DeleteFunc</font>，在fooInformer只设置了AddFunc和UpdateFunc，并没有DeleteFunc。这个是因为由于Foo和Deployment使一一对应的，并且每一个创建的Deployment都设置了OwnerReferences为Foo。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&amp;appsv1.Deployment&#123;</span><br><span class="line">    ObjectMeta: metav1.ObjectMeta&#123;</span><br><span class="line">        Name:      foo.Spec.DeploymentName,</span><br><span class="line">        Namespace: foo.Namespace,</span><br><span class="line">        OwnerReferences: []metav1.OwnerReference&#123;</span><br><span class="line">            *metav1.NewControllerRef(foo, samplev1alpha1.SchemeGroupVersion.WithKind(<span class="string">&quot;Foo&quot;</span>)),</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;,</span><br><span class="line">......</span><br></pre></td></tr></table></figure>
+
+<p>在执行kubectl delete Foo <foo_name>时，kube-controller会执行cascading delete级联删除（概念参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/architecture/garbage-collection/">Garbage Collection | Kubernetes</a> ），也就是在删除Foo实例对象的时候，也会将对应的deployment删除（因为创建deployment时设置了ownerRefernces为foo）.默认执行kubectl delete Foo <foo_name> 是后台删除与其关联的deployment，所以执行完会立刻返回成功。如果使用 kubectl delete Foo example-foo –cascade&#x3D;foreground 前台删除模式，则执行命令后，会等到所有deployment的资源删除完后，命令才返回。</p>
+<h2 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://xiaorui.cc/archives/7361">深入源码分析 kubernetes client-go list-watch 和 informer 机制的实现原理</a></li>
+<li><a target="_blank" rel="noopener" href="https://xiaorui.cc/archives/7359">深入源码分析 kubernetes client-go sharedIndexInformer 和 SharedInformerFactory 的实现原理</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md">https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qikqiak.com/k8strain/k8s-code/client-go/workqueue/#_1">workqueue - K8S训练营</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qikqiak.com/k8strain/k8s-code/client-go/indexer/">Indexer - K8S训练营</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/architecture/garbage-collection/">Garbage Collection | Kubernetes</a>)</li>
+<li><a target="_blank" rel="noopener" href="https://cloud.redhat.com/blog/kubernetes-deep-dive-code-generation-customresources">Kubernetes Deep Dive: Code Generation for CustomResources</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+            </div>
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/" rel="next" title="手把手DEBUG(第四篇：被调度到node上的pod怎么启动的)">
+                  手把手DEBUG(第四篇：被调度到node上的pod怎么启动的) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">45k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">2:44</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

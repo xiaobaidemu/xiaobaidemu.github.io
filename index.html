@@ -84,7 +84,7 @@
 
 
 <nav class="site-nav">
-  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
   </ul>
 </nav>
 
@@ -121,7 +121,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -130,8 +130,9 @@
         <span class="site-state-item-name">categories</span>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">1</span>
-        <span class="site-state-item-name">tags</span>
+          <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
 </div>
@@ -160,722 +161,6 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="xiaobaidemu">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/" class="post-title-link" itemprop="url">手把手DEBUG(第三篇:pod怎么被调度到一个node上)</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-      
-
-      <time title="Created: 2023-10-18 16:42:51 / Modified: 17:09:57" itemprop="dateCreated datePublished" datetime="2023-10-18T16:42:51+08:00">2023-10-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>1.6k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>6 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>更详细的debug操作可以参考我的<a href="%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83">另一篇文章</a></p>
-<h1 id="1-编译kube-scheduler二进制"><a href="#1-编译kube-scheduler二进制" class="headerlink" title="1.编译kube-scheduler二进制"></a>1.编译kube-scheduler二进制</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make all WHAT=cmd/kube-apiserver DBG=1</span><br></pre></td></tr></table></figure>
-
-<h1 id="2-终止默认的kube-scheduler对应-的pods"><a href="#2-终止默认的kube-scheduler对应-的pods" class="headerlink" title="2.终止默认的kube-scheduler对应 的pods"></a>2.终止默认的kube-scheduler对应 的pods</h1><p>kube-scheduler进程是static pods，是直接由kubelet管理，不经过apiserver, kubelet会监控&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;下通过yaml定义的pods，所以可以直接将 kube-scheduler.yaml移除当前目录,即可停止原来的kube-scheduler</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mv /etc/kubernetes/manifests/kube-scheduler.yaml &lt;其他目录&gt;</span><br><span class="line">kubectl get pods -n kube-system</span><br></pre></td></tr></table></figure>
-
-<p>这时候在执行查询命令已经看不到kube-scheduler对应的pods</p>
-<h1 id="3-创建一个最基本的pod"><a href="#3-创建一个最基本的pod" class="headerlink" title="3.创建一个最基本的pod"></a>3.创建一个最基本的pod</h1><p>由于我们已经将kube-scheduler对应的pod移除，所以创建的pod的状态始终是pending状态，这里我用了一个非常简单的pod</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: myapp-centos</span><br><span class="line">  labels:</span><br><span class="line">    name: myapp-centos</span><br><span class="line">    app: myapp-centos</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">    - name: myapp</span><br><span class="line">      image: centos</span><br><span class="line">      resources:</span><br><span class="line">        limits:</span><br><span class="line">          memory: &quot;1024Mi&quot;</span><br><span class="line">          cpu: &quot;500m&quot; # 等同于0.5cpu</span><br><span class="line">      imagePullPolicy: Always</span><br><span class="line">      command: [&quot;sh&quot;, &quot;-c&quot;, &quot;sleep infinity&quot;]</span><br></pre></td></tr></table></figure>
-
-<h1 id="4-通过vscode开始对kube-scheuler进行debug"><a href="#4-通过vscode开始对kube-scheuler进行debug" class="headerlink" title="4.通过vscode开始对kube-scheuler进行debug"></a>4.通过vscode开始对kube-scheuler进行debug</h1><p>配置如下，注意一定要禁用leader-election, 这样可以防止debug时中断比较久导致leader失效，造成程序自动终止的情况。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch local executable kube-scheduler&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;debugAdapter&quot;: &quot;dlv-dap&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-scheduler&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;--authentication-kubeconfig=/etc/kubernetes/scheduler.conf&quot;,</span><br><span class="line">                &quot;--authorization-kubeconfig=/etc/kubernetes/scheduler.conf&quot;,</span><br><span class="line">                &quot;--bind-address=127.0.0.1&quot;,</span><br><span class="line">                &quot;--kubeconfig=/etc/kubernetes/scheduler.conf&quot;,</span><br><span class="line">                &quot;--leader-elect=false&quot;</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h1 id="5-设置断点代码调试与走读"><a href="#5-设置断点代码调试与走读" class="headerlink" title="5.设置断点代码调试与走读"></a>5.设置断点代码调试与走读</h1><p>&emsp;&emsp; 在kube-scheduler pod终止后，我们在上面章节创建的pods的Status会始终处于Pending状态，这个时候就可以启动vscode进行debug。<br>kube-scheduler从cmd&#x2F;kube-scheduler&#x2F;server.go入口的main函数启动后，可以将更多断点加载pkg&#x2F;scheduler&#x2F;sceduler_one.go中。</p>
-<p>&emsp;&emsp;scheduler进程简单的理解就是一个大的不停机的for循环，<font color=red>watch所有处于未调度状态的pods</font>(Pending状态的pods是其中最简单的一种)，每次循环都从未调度的队列中取出一个pod执行调度逻辑，而每次循环的结束，就是以调用&#x2F;api&#x2F;v1&#x2F;namespaces&#x2F;default&#x2F;pods&#x2F;{pod_name}&#x2F;binding restful APIw为结束，将此pod和某一个满足要求的评分最高的Node进行绑定，并设置<strong>Pod.Conditions</strong>的PodScheduled为true，至于剩下Pods的启动逻辑就交给绑定的Node上的kubelet来处理了，kubelet会依次将启动Pods中的容器，然后进一步的修改Pod的Conditions信息。下面的表格梳理了需要走读的关键调用链对应的函数（这里代码走读不要陷入类似informer&#x2F;indexer的细节中，把握主要逻辑点，后续如果想了解更多informer等细节的处理，可以参考附录中的文章。）</p>
-<table>
-<thead>
-<tr>
-<th align="left"></th>
-<th align="left">文件</th>
-<th align="left">关键函数</th>
-<th align="left">相关解释</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">1</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler.go</td>
-<td align="left">func (sched *Scheduler) Run(ctx context.Context)</td>
-<td align="left">这个函数本质是持续不断地执行sched.scheduleOne 函数，如果没有pod需要调度，就会阻塞住</td>
-</tr>
-<tr>
-<td align="left">2</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler_one.go</td>
-<td align="left">func (sched *Scheduler) scheduleOne(ctx context.Context)</td>
-<td align="left">整个函数做的事情就是取一个未调度的Pod，然后决定将其放在哪个Node上</td>
-</tr>
-<tr>
-<td align="left">3</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;internal&#x2F;queue&#x2F;scheduling_queue.go</td>
-<td align="left">func MakeNextPodFunc(queue SchedulingQueue) func() *framework.QueuedPodInfo</td>
-<td align="left">从待调度的队列中pop出待调度的pod</td>
-</tr>
-<tr>
-<td align="left">4</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler_one.go</td>
-<td align="left">func (sched <em>Scheduler) schedulePod(ctx context.Context, fwk framework.Framework, state</em>framework.CycleState, pod *v1.Pod) (result ScheduleResult, err error)</td>
-<td align="left">包含了预选和优选的逻辑。预选就是先对所有Nodes进行过滤只留下符合用户定义的Node.优选就是在剩下的Node中根据负载等当前节点的资源使用情况选择最好的节点。</td>
-</tr>
-<tr>
-<td align="left">5.1</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler_one.go</td>
-<td align="left">func (sched <em>Scheduler) findNodesThatFitPod(ctx context.Context, fwk framework.Framework, state</em>framework.CycleState, pod *v1.Pod) ([]*v1.Node, framework.Diagnosis, error)</td>
-<td align="left">预选过程：依次对nodes检查是否满足pod亲和性，是否达到了资源最小要求(pod中所有容器的cpu等资源相加)，node上挂载的pv是否满足pvc要求</td>
-</tr>
-<tr>
-<td align="left">5.2</td>
-<td align="left">-</td>
-<td align="left">func (sched *Scheduler) findNodesThatPassFilters(…)</td>
-<td align="left">-</td>
-</tr>
-<tr>
-<td align="left">6</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler_one.go</td>
-<td align="left">func prioritizeNodes(…) (framework.NodeScoreList, error)</td>
-<td align="left">优选过程：通过对每个过滤后的节点执行多个打分插件，将多个插件针对一个节点的分数相加，然后和其他节点的分数进行比较，选择最高分的节点</td>
-</tr>
-<tr>
-<td align="left">7</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;sceduler_one.go</td>
-<td align="left">func (sched <em>Scheduler) bind(ctx context.Context, fwk framework.Framework, assumed</em>v1.Pod, targetNode string, state *framework.CycleState) (err error)</td>
-<td align="left">执行restful API POST–&gt;https:&#x2F;&#x2F;<api-server>&#x2F;api&#x2F;v1&#x2F;namespaces&#x2F;default&#x2F;pods&#x2F;<pod_name>&#x2F;binding</td>
-</tr>
-<tr>
-<td align="left">8</td>
-<td align="left">pkg&#x2F;scheduler&#x2F;framework&#x2F;plugins&#x2F;defaultbinder&#x2F;default_binder.go</td>
-<td align="left">func (b DefaultBinder) Bind(ctx context.Context, state <em>framework.CycleState, p</em>v1.Pod, nodeName string) *framework.Status</td>
-<td align="left">pods&#x2F;binding事实上是pods这个资源的subresource，而post请求事实上就是将更新Pod的Nodes的调度信息以及Pod的Conditions信息，写入etcd中，之后创建Pod和其容器的职责就转交给对应Node的kubelet了</td>
-</tr>
-</tbody></table>
-<p>&emsp;&emsp;这里面有非常多的细节，比如待调度的pods的队列如何设计，如何利用informer缓存和监听未调度的pods，还有预选和优选的更多的细节，例如如何通过扩展更多”插件”，来自定义预选优选等逻辑，定制调度。</p>
-<p>&emsp;&emsp;调度的模块简化为三个步骤：1. 预选：过滤掉无法满足pods需求的节点 2. 优选：在预选阶段剩下的节点进行排序 3. 选择：选择最高分的node进行node和pods的绑定。主要关注pod状态，或者Pods中Status信息的变化，以及选择到的Node与Pod的绑定逻辑，选择Node算法或者调度算法细节可以涉及到比较多细节不做展开。</p>
-<p>&emsp;&emsp;可以看到整个scheduler的逻辑是k8s组件中最为单一，也是最为好理解的，也是留给各个云厂商灵活性很大的一个组件，它支持更多调度的扩展，使用户根据集群中应用的场景，设计符合自身的调度算法。</p>
-<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><p>更加细节的kube-scheduler的设计思路可以查阅下面两篇官方的文档，详细阐述了设计思想</p>
-<ol>
-<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/">Scheduling Framework | Kubernetes</a>（主要介绍了从v1.19版本之后，pod调度的设计逻辑，网上有很多源码阅读都是v1.19之前版本的所以会和近期的版本有比较大的出入）</li>
-<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-scheduling/scheduling_code_hierarchy_overview.md">从代码角度详细描述了如何整合各种队列，cache，插件等的方式组装一个可以自定义的调度器</a>（其中的代码会和最新版本略有出入但是整体逻辑相同）</li>
-<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-scheduling/scheduler_queues.md">详细描述Scheduler中队列的设计包括通过多个队列来处理调度和调度失败情况下pod的重试问题</a></li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="xiaobaidemu">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/" class="post-title-link" itemprop="url">手把手DEBUG(第二篇：从一个到达APIServer的请求开始)</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-      
-
-      <time title="Created: 2023-10-18 15:14:22 / Modified: 17:06:25" itemprop="dateCreated datePublished" datetime="2023-10-18T15:14:22+08:00">2023-10-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>3.9k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>14 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>我在首次接触k8s最头疼的问题是，面对上百万行错综复杂的代码，到底应该如何抓住”主次”，从哪一个文件看起。很多源码分析的教程更多的是从cmd&#x2F;kube-apiserver开始，诚然这是一个从零开始debug的手段，但是debug一会儿就会陷入非常深的调用链的细节，导致整个过程痛苦不堪，这里我想<font color=red>从一个pod从请求到创建再到整个生命周期角度</font>，以方式聊聊源码，这种方法会让阅读变得更加简单。</p>
-</blockquote>
-<h1 id="从理解API结构开始"><a href="#从理解API结构开始" class="headerlink" title="从理解API结构开始"></a>从理解API结构开始</h1><p>&emsp;&emsp;k8s中一个特定restful URL Path 对应着一个固定的资源. 一般而言一个URL Path如下由几个部分构成</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/[&#123;apis&#125;|&#123;api&#125;]/[&#123;group&#125;]/&#123;version&#125;/namespaces/&#123;namespace&#125;/&#123;resource&#125;/&#123;object实体名&#125;[/simple资源]</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;注：simple资源主要是给特定对象的特定动作使用，非持久化，例如&#x2F;pods&#x2F;{object name}&#x2F;status 可以用来对pod对象修改状态<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/k8s_api_structure.png" alt="k8s_api_structure"><br>&emsp;&emsp;有了URL  path，那下一步就是定位到path是如何同具体的处理逻辑相绑定的，即如何进行路由的。这里我们以pods作为上面URL Path中的resource，来分析register逻辑。这里先说结论，对于pods资源的相关处理逻辑主要在 vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;installer.go文件中APIInstaller中的registerResourceHandlers方法。</p>
-<p>&emsp;&emsp;此函数的操作是将一个具体资源对应的restful URL path按照restful架构遵循的统一接口原则，进行资源注册，即给每个资源对应的http方法，例如GET, PUT, POST, PATCH,DELETE 注册不同的函数执行逻辑，以此来完成对特定资源实体的增删改查能力。</p>
-<p>&emsp;&emsp;上面，我们只从最小维度（针对某一个URL）简述注册逻辑，我们从一个宏观的角度来看看整个apiserver启动时候，都经过了哪些处理。宏观上apiserver，通过不同的URL path前缀将APIserver分成三种。分别是一个包含内置API对象的<font color=red>KubeAPIServer</font>和两个不同方式用于扩展服务的<font color=red>APIExtensionsServer</font>和<font color=red>AggregatorServer</font>。下面是部分前缀对应不同的server示例</p>
-<table>
-    <tr>
-        <th>server类型</th><th>URL前缀</th><th>举例 </th>
-    </tr>
-    <tr>
-        <td rowspan="2">apiextensions-apiserver</td>
-        <td>/apis/apiextensions.k8s.io/</td>
-        <td>customresourcedefinations, customresourcedefinations/status</td>
-    </tr>
-    <tr>
-        <td>/apis/{自定义group}</td>
-        <td align="left">例如安装kubeflow/training-operator后，可以使用/apis/kubefow.org/v1/namespace/{ns}/pytorchjobs/{name}
-路由路径匹配过程如下：匹配/apis/->不匹配所有goRestfulContainer已经注册的前缀->匹配/apis/kubeflow.org/v1/前缀对应nonGoRestfulMux->crdHandler
-        </td>
-    </tr>
-    <tr>
-        <td rowspan="2">apiserver</td>
-        <td>/api/v1</td>
-        <td>pods, pods/status, pods/log, bindings,replicationControllers, nodes,events...</td>
-    </tr>
-    <tr>
-        <td>/apis</td>
-        <td>apps, authentication.k8s.io, batch, rbac.authorization.k8s.io
-        </td>
-    </tr>
-    <tr>
-        <td rowspan="2">aggregator</td>
-        <td>/apis/apiregistration.k8s.io</td>
-        <td>apiservices, apisevices/status</td>
-    </tr>
-    <tr>
-        <td>/apis/{自定义group}</td>
-        <td align="left">例如[安装k8s官方的sample-apiserver](https://github.com/kubernetes/sample-apiserver)后，可以使用/apis/wardle.example.com/v1alpha1/namespaces/{namespace}/flunders/{name}路由路径匹配过程如下：匹配/apis->不匹配所有goRestfulContainer已经注册的前缀->匹配/apis/wardle.example.com/v1/前缀对应nonGoRestfulMux->proxyHandler(vendor/k8s.io/kube-aggregator/pkg/apiserver/handler_proxy.go)
-        </td>
-    </tr>
-</table>
-下面是这三种Server的注册逻辑对象的关注点代码
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 这一部分注册分为两类，并且是&quot;先后&quot;注册,一类是面向CRD的APIExtensions服务,另一类是面向k8s内置API对象的APIServer</span><br><span class="line">- createAPIExtensionsServer(...) # --- cmd/kube-apiserver/app/server.go</span><br><span class="line">  - completedConfig.New(...) # -- vender/k8s.io/apiextensions-apiserver/apiserver.go</span><br><span class="line">    - GenericAPIServer.InstallAPIGroups/APIGroupVersion.InstallREST/APIInstaller.registerResourceHandlers # 和下方注册内置API对象相同</span><br><span class="line">  - 启动和CRD相关controller协程，用于&quot;实时&quot;将用户定义的CRD转化成对应的可执行上述增删改查的restful API</span><br><span class="line">- CreateKubeAPIServer(...) # --- cmd/kube-apiserver/app/server.go</span><br><span class="line">  - completedConfig.New(...) # --- pkg/controlplane/instance.go</span><br><span class="line">      # 在APIServer注册中，又区分为为两类，一种是上图中/api为前缀的核心资源，例如pods/nodes/services等，另一种为/apis为前缀的资源</span><br><span class="line">      - Instance.InstallLegacyAPI(...) # /api为前缀</span><br><span class="line">      - Instance.InstallAPI(...) # /apis为前缀</span><br><span class="line">        - GenericAPIServer.InstallAPIGroups(...) # 注册同一个以/apis前缀的所有路由（注意如果前缀是/apis则有一个特例，以apiextensions.k8s.io为group的资源组和其他资源组是分开处理的，因为apiextensions.k8s.io代表的是CRD一种扩展资源和其他原生api不一样，所以分开注册）--- vender/k8s.io/apiserver/pkg/server/genericapiserver.go</span><br><span class="line">          - APIGroupVersion.InstallREST(...) # 以group+version维度进行路由注册，一个group+version对应着一个go-restful的webservice实例 --- vender/k8s.io/apiserver/pkg/endpoints/groupversion.go</span><br><span class="line">            - APIInstaller.registerResourceHandlers(...) # --- vender/k8s.io/apiserver/pkg/endpoints/installer.go</span><br><span class="line">    # 创建AggregatorServer,这是另一种与CRD方式不同的扩展apiserver的方式</span><br><span class="line">- createAggregatorServer(... ) # --- cmd/kube-apiserver/app/server.go</span><br></pre></td></tr></table></figure>
-
-<h1 id="当一个创建pod的请求进入apiserver"><a href="#当一个创建pod的请求进入apiserver" class="headerlink" title="当一个创建pod的请求进入apiserver"></a>当一个创建pod的请求进入apiserver</h1><h2 id="拦截器处理"><a href="#拦截器处理" class="headerlink" title="拦截器处理"></a>拦截器处理</h2><p>&emsp;&emsp;在apiserver中拦截器并非使用go-restful中自带的restful.Filter方式实现的，而是使用比较朴实的方式，通过类似装饰函数的方式层层封装http.Handler，来达到请求过来后层层拦截。可以关注DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler 函数，此函数像类似入栈的顺序，先装饰的最后执行，可以看到请求进来会依次非常多的拦截处理，其中很重要的先后执行Authentication认证&#x2F;Authorization授权 （注：访问控制逻辑不在此处执行，是在执行完拦截处理后）在实现上。</p>
-<h2 id="简化理解APIserver中的http服务"><a href="#简化理解APIserver中的http服务" class="headerlink" title="简化理解APIserver中的http服务"></a>简化理解APIserver中的http服务</h2><p>&emsp;&emsp;无论APIServer多么复杂，其本质仍然是使用的golang的net&#x2F;http。即下方这行代码（不过源码中没有这么直白，直接调用ListenAndServe启动，具体启动逻辑可以查阅vendor&#x2F;k8s.io.apiserver&#x2F;pkg&#x2F;server&#x2F;secure_serving.go的RunServer函数）</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">s := &amp;http.Server&#123;</span><br><span class="line">  Addr:           &quot;:8080&quot;,</span><br><span class="line">  Handler:        handler, </span><br><span class="line"> &#125;</span><br><span class="line">s.ListenAndServe()</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;所有的api注册逻辑可以认为是围绕实现Handler这个接口中的ServeHTTP(ResponseWriter, *Request)。但是有一个问题，上一节说APIServer使用的是go-restful库进行路由注册，来实现restful风格的API，那具体是如何实现的呢？这里我们先定位到k8s中handler接口实现对应的struct—-APIServerHandler，这个APIServerHandler实现了接口中的ServeHTTP。由下方代码可以看出所有的请求处理的起点是从FullHandlerChain开始，而这个FullHandlerChain就是上文说的各类顺序执行的拦截器，拦截器的最后是一个Director，同样对应的是一个实现了http.Handler的接口的对象，而这个Direcrtor对应的就是真实处理资源增删改查的实现，而从下方的代码可以看到director包含了不同的路由方式，一个是基于go-restful的restful.Container(goRestfulContainer)，另一个是k8s自己实现的一种根据URL前缀匹配的路由mux.PathRecorderMux(nonGoRestfulMux)。那根据第一节中不同前缀对应处理的资源类型不同，可以推断这两个不同的路由方式也对应着处理不同的资源。</p>
-<p>&emsp;&emsp;goRestfulContainer：主要用于处理核心组&#x2F;api&#x2F;v1，APIServer内置资源组例如&#x2F;apis&#x2F;为前缀的batch&#x2F;apps等资源，director中会直接调用restful.Container中的Dispatch方法，来直接使用go-restful中自己实现的路由逻辑。</p>
-<p>&emsp;&emsp;nonGoRestfulMux：主要处理通过CRD方式或者通过AggregatorServer方式扩展的资源，虽然这些资源同样以&#x2F;apis前缀开头，但是可以看到在Director的实现中，会通过比对是否URL已经在goRestfulContainer中注册的方式，来判断是否执行nonGoRestfulMux路由。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">// APIServerHandlers holds the different http.Handlers used by the API server.</span><br><span class="line">// This includes the full handler chain, the director (which chooses between gorestful and nonGoRestful,</span><br><span class="line">// the gorestful handler (used for the API) which falls through to the nonGoRestful handler on unregistered paths,</span><br><span class="line">// and the nonGoRestful handler (which can contain a fallthrough of its own)</span><br><span class="line">// FullHandlerChain -&gt; Director -&gt; &#123;GoRestfulContainer,NonGoRestfulMux&#125; based on inspection of registered web services</span><br><span class="line">type APIServerHandler struct &#123;</span><br><span class="line"> // FullHandlerChain is the one that is eventually served with.  It should include the full filter</span><br><span class="line"> // chain and then call the Director.</span><br><span class="line"> FullHandlerChain http.Handler</span><br><span class="line"> // The registered APIs.  InstallAPIs uses this.  Other servers probably shouldn&#x27;t access this directly.</span><br><span class="line"> GoRestfulContainer *restful.Container</span><br><span class="line"> // NonGoRestfulMux is the final HTTP handler in the chain.</span><br><span class="line"> // It comes after all filters and the API handling</span><br><span class="line"> // This is where other servers can attach handler to various parts of the chain.</span><br><span class="line"> NonGoRestfulMux *mux.PathRecorderMux</span><br><span class="line"> Director http.Handler</span><br><span class="line">&#125;</span><br><span class="line">type director struct &#123;</span><br><span class="line"> name               string</span><br><span class="line"> goRestfulContainer *restful.Container</span><br><span class="line"> nonGoRestfulMux    *mux.PathRecorderMux</span><br><span class="line">&#125;</span><br><span class="line">// ServeHTTP makes it an http.Handler</span><br><span class="line">func (a *APIServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) &#123;</span><br><span class="line"> a.FullHandlerChain.ServeHTTP(w, r)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="定位到创建的逻辑"><a href="#定位到创建的逻辑" class="headerlink" title="定位到创建的逻辑"></a>定位到创建的逻辑</h2><p>&emsp;&emsp;有了以上的基础铺垫，下一步我们将从创建一个pod开始进行debug，通过跟踪整个pod和生命周期相关的对象的变更(比如pods&#x2F;status, event)来更详细的展示pod的调度过程。</p>
-<p>&emsp;&emsp;这里我们现将所有&#x2F;etc&#x2F;kubernetes&#x2F;manifests的kube-apiserver.yaml&#x2F;kube-controller-manager.yaml以及kube-scheduler.yaml移除（停止调度和控制组件的执行，避免pod创建后立刻进入调度流程，导致无法捕捉到状态细节），这里我们准备一个简单的pods，其对应的yaml如下</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: myapp-creater-demo</span><br><span class="line">  labels:</span><br><span class="line">    name: myapp-creater-demo</span><br><span class="line">    app: myapp-creater-demo</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">  - name: myapp-container</span><br><span class="line">    image: nginx</span><br><span class="line">    resources:</span><br><span class="line">      limits:</span><br><span class="line">        memory: &quot;32Mi&quot;</span><br><span class="line">        cpu: &quot;100m&quot;</span><br><span class="line">    imagePullPolicy: Always</span><br><span class="line">    command: [&#x27;sh&#x27;, &#x27;-c&#x27;, &#x27;nginx &amp;&amp; sleep infinity&#x27;]</span><br><span class="line">    ports:</span><br><span class="line">      - containerPort: 80</span><br><span class="line">  nodeSelector:</span><br><span class="line">     node-restriction.kubernetes.io/resource: gpu</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;然后打开debug，执行<strong>kubectl apply -f creater_pod.yaml</strong>来创建pods，跟踪pods。apply命令行为会包含两个动作—-即两个restful API ，会先<strong>查询是否存在对应名字的pods</strong>,如果不存在则会执行create操作。根据上面的分析，接口先执行我们可以将断点定位到vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;create.go中的createHandler，另外和pod对象存储相关的可以关心 pkg&#x2F;registry&#x2F;core&#x2F;rest&#x2F;storage_core.go(其中storageNewLegacyRESTStorage是和上文说的以&#x2F;api&#x2F;v1为前缀的k8s核心组件相关的存储接口，对于本例可以关系的pods以及其对应的子资源pods&#x2F;status)。下面我们用表格顺序梳理出整个调用链，以及调用链中关键的数据结构。</p>
-<table>
-<thead>
-<tr>
-<th align="left">调用顺序</th>
-<th align="left">文件</th>
-<th align="left">关键函数</th>
-<th align="left">以上述示例解释过程与数据结构</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">1</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;get.go</td>
-<td align="left">func GetResource(r rest.Getter, scope *RequestScope) http.HandlerFunc</td>
-<td align="left">根据上一节讲述的，注册阶段中会根据restful URL “&#x2F;api&#x2F;v1&#x2F;namespaces&#x2F;default&#x2F;pods&#x2F;myapp-creater-demo”映射处理逻辑，对于当前示例，请求在真实处理过程中，映射到GetResource逻辑</td>
-</tr>
-<tr>
-<td align="left">2</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
-<td align="left">func (e <em>Store) Get(ctx context.Context, name string, options</em>metav1.GetOptions) (runtime.Object, error)</td>
-<td align="left">从文件路径的generic看出这是一个对k8s中资源进行通用存储层操作的抽象，其中尤为重要的是这个Store结构体，根据注释可以了解到Store，其目的是可以嵌入到任何K8s的Kind对象中，提供CRUD统一操作，以及一些通用的包括ResourceVersion冲突检测，创建更新删除的通用策略</td>
-</tr>
-<tr>
-<td align="left">3</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
-<td align="left">func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, out runtime.Object) error</td>
-<td align="left">在etcd中查询以”&#x2F;registry&#x2F;pods&#x2F;default&#x2F;myapp-creater-demo” 为key的对象是否存在</td>
-</tr>
-<tr>
-<td align="left">4.1</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;create.go</td>
-<td align="left">func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Interface, includeName bool) http.HandlerFunc</td>
-<td align="left">1.  获取请求body体中的关于pod定义的内容</td>
-</tr>
-<tr>
-<td align="left">4.2</td>
-<td align="left">-</td>
-<td align="left">-</td>
-<td align="left">2.  将body内容反序列化成对应Kind的结构体对象，可以定位序列化后的对象为定义在pkg&#x2F;apis&#x2F;core&#x2F;types.go中的Pod结构体</td>
-</tr>
-<tr>
-<td align="left">5</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
-<td align="left">func (e <em>Store) Create(ctx context.Context, obj runtime.Object, createValidation rest.ValidateObjectFunc, options</em>metav1.CreateOptions) (runtime.Object, error)</td>
-<td align="left">3.  紧跟上一步，开始创建，创建过程中会先执行准入控制，用来验证和修改用户设置的pod的参数是否合理</td>
-</tr>
-<tr>
-<td align="left">6.1</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;cacher&#x2F;cacher.go</td>
-<td align="left">func (c *Cacher) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error</td>
-<td align="left">4.  与etcd3交互，将encode为二进制，以&#x2F;registry&#x2F;pods&#x2F;default&#x2F;myapp-creater-demo为key</td>
-</tr>
-<tr>
-<td align="left">6.2</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
-<td align="left">func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error</td>
-<td align="left">-</td>
-</tr>
-</tbody></table>
-<p>&emsp;&emsp;到目前为止，关于用户定义pods的配置信息，已经写入了etcd存储中，并且可以看到Pod结构体中PodStatus结构体，记录状态的参数一直为Pending，并且对应的ContainerStatus也是空(由于已经关闭了调度进程，不会进一步的执行调度)</p>
-<h1 id="以deployments为例再来梳理一遍分析请求的全流程"><a href="#以deployments为例再来梳理一遍分析请求的全流程" class="headerlink" title="以deployments为例再来梳理一遍分析请求的全流程"></a>以deployments为例再来梳理一遍分析请求的全流程</h1><p>&emsp;&emsp;上文我们用一个pod的创建来简单部分主要逻辑，这节我们以查询Deployment为例，执行kubectl get deployment来逐层debug分析调用链（备注：这里除去身份认证，鉴权等各种过滤情况），分析完后我相信后面如果需要查看某些代码的设计，就可以从这些调用链入手。(下面以1.25.3版本为例文件中vender&#x2F;k8s.io本质上是对staging&#x2F;src&#x2F;k8s.io目录的软链)</p>
-<table>
-<thead>
-<tr>
-<th align="left">序号</th>
-<th align="left">文件</th>
-<th align="left">对应函数</th>
-<th align="left">备注</th>
-<th align="left">进入函数后关注的代码</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">1.1</td>
-<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;handler.go</td>
-<td align="left">func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) （122行）</td>
-<td align="left">请求已经经过所有认证鉴权等拦截器</td>
-<td align="left">d.nonGoRestfulMux.ServeHTTP(w, req) (154行)</td>
-</tr>
-<tr>
-<td align="left">1.2</td>
-<td align="left">-</td>
-<td align="left">-</td>
-<td align="left">可以搜索相关拦截器（参考vender&#x2F;k8s。io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;config.go相关注册代码func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler</td>
-<td align="left">-</td>
-</tr>
-<tr>
-<td align="left">2</td>
-<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;mux.go</td>
-<td align="left">func (h <em>pathHandler) ServeHTTP(w http.ResponseWriter, r</em>http.Request)（239行）</td>
-<td align="left">其上一个函数调用为func (m <em>PathRecorderMux) ServeHTTP(w http.ResponseWriter, r</em>http.Request)</td>
-<td align="left">prefixHandler.handler.ServeHTTP(w, r)（249行）</td>
-</tr>
-<tr>
-<td align="left">3</td>
-<td align="left">vender&#x2F;k8s.io&#x2F;kube-aggregator&#x2F;pkg&#x2F;apiserver&#x2F;handler_proxy.go</td>
-<td align="left">func (r <em>proxyHandler) ServeHTTP(w http.ResponseWriter, req</em>http.Request) （112行）</td>
-<td align="left">这里会决定是走本地的apiserver还是通过aggragator扩展的server</td>
-<td align="left">r.localDelegate.ServeHTTP(w, req)(125行)</td>
-</tr>
-<tr>
-<td align="left">4</td>
-<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;server&#x2F;handler.go</td>
-<td align="left">func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) （122行）</td>
-<td align="left">会发现再次进入了这个函数，不同的是下一步调用的代码不一样，开始进入restful路由逻辑</td>
-<td align="left">d.goRestfulContainer.Dispatch(w, req) （146行）</td>
-</tr>
-<tr>
-<td align="left">5.1</td>
-<td align="left">vendor&#x2F;github.com&#x2F;emicklei&#x2F;go-restful&#x2F;v3&#x2F;container.go</td>
-<td align="left">1.  func (c <em>Container) Dispatch(httpWriter http.ResponseWriter, httpRequest</em>http.Request (197行)</td>
-<td align="left">restful源码，关注dispatch路由逻辑</td>
-<td align="left">1.  c.dispatch(httpWriter, httpRequest)（204行）</td>
-</tr>
-<tr>
-<td align="left">5.2</td>
-<td align="left">-</td>
-<td align="left">2.  func (c <em>Container) dispatch(httpWriter http.ResponseWriter, httpRequest</em>http.Request)（208行）</td>
-<td align="left">-</td>
-<td align="left">2.  route.Function(wrappedRequest, wrappedResponse) (299行)</td>
-</tr>
-<tr>
-<td align="left">6</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;endpoints&#x2F;handlers&#x2F;get.go</td>
-<td align="left">func ListResource(r rest.Lister, rw rest.Watcher, scope *RequestScope, forceWatch bool, minRequestTimeout time.Duration) (169行)</td>
-<td align="left">一个restful到存储操作可以是一个一一对应关系，这里包含了从restful到etcd的操作流</td>
-<td align="left">result, err :&#x3D; r.List(ctx, &amp;opts) （278行）</td>
-</tr>
-<tr>
-<td align="left">7.1</td>
-<td align="left">vender&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;registry&#x2F;generic&#x2F;registry&#x2F;store.go</td>
-<td align="left">1.  func (e <em>Store) List(ctx context.Context, options</em>metainternalversion.ListOptions)</td>
-<td align="left">RESTStorage实现</td>
-<td align="left">1.  out, err :&#x3D; e.ListPredicate(ctx, e.PredicateFunc(label, field), options) （335）</td>
-</tr>
-<tr>
-<td align="left">7.2</td>
-<td align="left">-</td>
-<td align="left">2.  func (e <em>Store) ListPredicate(ctx context.Context, p storage.SelectionPredicate, options</em>metainternalversion.ListOptions) (runtime.Object, error)（347行）</td>
-<td align="left">-</td>
-<td align="left">-</td>
-</tr>
-<tr>
-<td align="left">8</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;cacher&#x2F;cacher.go</td>
-<td align="left">func (c *Cacher) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object)（633行）</td>
-<td align="left">其上一层调用可以关注DryRunnableStorage</td>
-<td align="left">return c.storage.GetList(ctx, key, opts, listObj)(638行)</td>
-</tr>
-<tr>
-<td align="left">9.1</td>
-<td align="left">vendor&#x2F;k8s.io&#x2F;apiserver&#x2F;pkg&#x2F;storage&#x2F;etcd3&#x2F;store.go</td>
-<td align="left">func (s *store) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object)（524行）</td>
-<td align="left">真实的db操作层入口，可以看到deployments在etcd中对应key为”&#x2F;registry&#x2F;deployments&#x2F;default”</td>
-<td align="left">1.  getResp, err &#x3D; s.client.KV.Get(ctx, key, options…)（660行）</td>
-</tr>
-<tr>
-<td align="left">9.2</td>
-<td align="left">-</td>
-<td align="left">-</td>
-<td align="left">获取对应的value并且反序列化value</td>
-<td align="left">2.  appendListItem(v, data, uint64(kv.ModRevision), pred, s.codec, s.versioner, newItemFunc) (700行)</td>
-</tr>
-</tbody></table>
-<p>&emsp;&emsp;从上面的pod和deployment两个例子看，简单的来说一个RESTful API对应一个Resource，而每个Resource都需要实现rest.Storage接口。</p>
-<p>&emsp;&emsp;当然，上面的例子其实是比较简单的apiserver的实现场景，比较复杂的场景还有使用watch方式监听资源，会用到 http 协议 chunked 机制实现，通过 在header中的Transfer-Encoding: chunked 来实现持续watch，apiserver会启动一个协程周期性的轮训并分段持续接收相应的相应。而对应使用kubectl exec -it 与pod建立交互终端 ,则是使用SPDY协议使得信息可以在单个 TCP 连接进行并发双向收发（好像近期的已经可以使用websocket，具体没有代码层面考证）</p>
-<h1 id="参考附录"><a href="#参考附录" class="headerlink" title="参考附录"></a>参考附录</h1><ol>
-<li><a target="_blank" rel="noopener" href="https://wukaiying.github.io/k8s/kubelet-create-pod-lifecycle/">Kubelet 创建pod流程分析 - Kaiying</a></li>
-<li><a target="_blank" rel="noopener" href="https://cizixs.com/2017/06/07/kubelet-source-code-analysis-part-2/">kubelet 源码分析：pod 新建流程 | Cizixs Write Here</a></li>
-<li><a target="_blank" rel="noopener" href="https://icloudnative.io/posts/what-happens-when-k8s/">kubectl 创建 Pod 背后到底发生了什么？ – 云原生实验室 - Kubernetes|Docker|Istio|Envoy|Hugo|Golang|云原生</a></li>
-<li><a target="_blank" rel="noopener" href="https://erkanerol.github.io/post/how-kubectl-exec-works/">How does ‘kubectl exec’ work? - Blog</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/kubernetes-sigs/apiserver-builder-alpha/blob/master/docs/concepts/api_building_overview.md">https://github.com/kubernetes-sigs/apiserver-builder-alpha/blob/master/docs/concepts/api_building_overview.md</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/duyanghao/kubernetes-reading-notes/blob/master/core/api-server/design.md">https://github.com/duyanghao/kubernetes-reading-notes/blob/master/core/api-server/design.md</a></li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="xiaobaidemu">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | xiaobaidemu">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-      
-
-      <time title="Created: 2023-10-18 11:45:08 / Modified: 16:45:13" itemprop="dateCreated datePublished" datetime="2023-10-18T11:45:08+08:00">2023-10-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>3k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>11 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。</p>
-</blockquote>
-<h1 id="先有一个自己的k8s集群"><a href="#先有一个自己的k8s集群" class="headerlink" title="先有一个自己的k8s集群"></a>先有一个自己的k8s集群</h1><p>这里推荐使用<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/">kubeadm</a>方式完成kubernetes集群的搭建，之所以不采用minikube，主要有以下几个原因：</p>
-<ol>
-<li>主要是使用kubeadm创建的过程中也是一个复习整个kubernetes集群组件的过程。</li>
-<li>虽然kubeadm在创建集群过程中，都能比较容易得创建集群，但是相对于minikube这种开箱即用的来说，还是有一定繁琐步骤需要自行处理。例如需要选择不同的底层组件（例如CRI和OCI的选择，可以参考<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6">从kubernetes中容器生态窥探设计模式的哲学</a>这篇文章）甚至如果有多台机器，可以将在多台机器部署k8s node,在后续学习的时候，可以更真实的理解例如调度的逻辑。</li>
-<li>minikube更多的可以帮助一个从没有接触过k8s的人，让其能够通过minikube上手使用k8s，来学习了解k8s的理念。</li>
-<li>因为后续我们会通过将原本的k8s集群中的某一个组件停止，替换为我们自己通过源码的编译的组件，进而对k8s的这个组件进行debug，来学习里面的一些源码，因此知道这些组件的停止启动，部署逻辑是很有必要的，所以kubeadm在这方便是更好的工具。</li>
-</ol>
-<h2 id="使用kubeadm搭建k8s集群的一些注意事项"><a href="#使用kubeadm搭建k8s集群的一些注意事项" class="headerlink" title="使用kubeadm搭建k8s集群的一些注意事项"></a>使用kubeadm搭建k8s集群的一些注意事项</h2><p>kubeadm的教程已经非常详细了，所以这里我不会再将原文赘述一遍。但是在创建的集群的时候也会遇到很多坑，这里我主要说明一下我遇到的几个问题，帮助读者可以避免过多的耗费时间在这些异常问题上。本文及后续所有相关文章均以k8s v1.25.3版本为例创建集群。</p>
-<ol>
-<li>这里我使用了不太常用的cri-dockerd作为容器运行时（更推荐使用containerd&#x2F;cri-o作为容器运行时），<a target="_blank" rel="noopener" href="https://github.com/Mirantis/cri-dockerd">GitHub - Mirantis&#x2F;cri-dockerd: dockerd as a compliant Container Runtime Interface for Kubernetes</a> 需要注意的时候<font color=red>必须使用sudo 或者 以root用户进行安装</font>。并且安装完成并且使用systemctl命令启动后查看是否可以正常运行.</li>
-<li>务必保证&#x2F;etc&#x2F;crictl.yaml没有设置任何image-endpoint和runtime-endpoint配置（如果有请删除），否则kubeadm中的cri-socket选项将被覆盖</li>
-<li>在安装kubeadm&#x2F;kubelet&#x2F;kubectl的时候，需要指定版本，否则会默认安装最新版本，这里我安装的是1.25.3版本</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># Installing kubeadm | Kubernetes</span><br><span class="line">sudo yum install -y kubelet-1.25.3 kubeadm-1.25.3 kubectl-1.25.3 --disableexcludes=kubernetes</span><br></pre></td></tr></table></figure>
-
-<ol start="4">
-<li>这里我列出我的kubeadm init参数，这些参数有一些会和后面debug时启动的参数有关</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 使用cri-dockerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/cri-dockerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 使用containerd作为CRI</span><br><span class="line">sudo kubeadm init --kubernetes-version=v1.25.3 --control-plane-endpoint=9.134.231.177 --pod-network-cidr=10.244.0.0/16 --service-cidr=10.96.0.0/12 --apiserver-advertise-address=0.0.0.0 --ignore-preflight-errors=Swap --cri-socket unix:///var/run/containerd/containerd.sock --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line"># 重置kubeadm init生成的配置</span><br><span class="line">sudo kubeadm reset --cri-socket unix:///var/run/xxxx</span><br></pre></td></tr></table></figure>
-
-<ol start="5">
-<li>如果在使用国内阿里云或者腾讯云，除了需要kubeadm 参数中使用–image-repository参数设置国内镜像仓库外。如果使用containerd的话，需要手动先生成containerd相关配置文件<a target="_blank" rel="noopener" href="https://github.com/containerd/containerd/blob/main/docs/getting-started.md">containerd&#x2F;getting-started.md at main · containerd&#x2F;containerd · GitHub</a>，并且修改对应的配置信息，如下</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># containerd uses a configuration file located in /etc/containerd/config.toml for specifying daemon level options. 默认containerd不会有这个文件，需要手动执行此命令生成</span><br><span class="line">containerd config default &gt; /etc/containerd/config.toml</span><br><span class="line"># 注意需要修改 sandbox_image配置，因为这个镜像是创建pod时，最先使用pause镜像启动进程，而后在启动真实容器。所以在kubeadm init过程中可能出现k8s控制面组件启动不起来，很大可能是由于这个镜像由于网络问题无法下载下来，需要修改为国内镜像。</span><br><span class="line">sandbox_image = &quot;registry.k8s.io/pause:3.6&quot; </span><br><span class="line">sandbox_image = &quot;registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6&quot;</span><br></pre></td></tr></table></figure>
-
-<ol start="6">
-<li>安装完成后你仍然需要选择一个cni插件进行安装，可以参考<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/cluster-administration/addons/">Installing Addons | Kubernetes</a></li>
-<li>如果你只有一台机器用来调试，默认情况k8s master节点是不能创建非control-plane的pod的（因为标记了相应的污点，仅允许在此节点上调度关键工作负载），所以需要移除</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl taint node &lt;you&gt; node-role.kubernetes.io/control-plane-</span><br></pre></td></tr></table></figure>
-
-<ol start="8">
-<li>在搭建完成后，可以使用kubernates dashboard安装可视化的UI，具体可以参考<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/tree/master/docs/user/accessing-dashboard">dashboard&#x2F;docs&#x2F;user&#x2F;accessing-dashboard at master · kubernetes&#x2F;dashboard · GitHub</a>并且使用Service的NodePort模式（否则如果使用kubectl proxy方式访问会出现”检测到不安全的访问。无法登陆”提示），使用<node_ip>:<nodePort>方式访问dashboard<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/dashboard_image.png" alt="dashboard"></li>
-<li>登陆kubernetes dashboard建议使用此方法：创建service account并且和cluster-admin这个默认的clusterrole绑定，然后在控制节点执行kubectl -n kubernetes-dashboard create token &lt;service account名字&gt; 创建bearer token登录。<a target="_blank" rel="noopener" href="https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md">dashboard&#x2F;creating-sample-user.md at master · kubernetes&#x2F;dashboard · GitHub</a></li>
-</ol>
-<h1 id="使用VSCode-Debug-k8s组件"><a href="#使用VSCode-Debug-k8s组件" class="headerlink" title="使用VSCode Debug k8s组件"></a>使用VSCode Debug k8s组件</h1><p>这里我们先以k8s的apiserver为例，进行说明</p>
-<p>工具：</p>
-<ol>
-<li>vscode安装插件<a target="_blank" rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack">vscode Remote Development扩展套件</a></li>
-<li>安装<a target="_blank" rel="noopener" href="https://github.com/go-delve/delve">delve golang语言debugger</a></li>
-</ol>
-<p><font color=red>调试所用的源文件版本：kubernetes版本 v1.25.3 </font></p>
-<h2 id="本地debug编译好的二进制apiserver-（推荐）"><a href="#本地debug编译好的二进制apiserver-（推荐）" class="headerlink" title="本地debug编译好的二进制apiserver （推荐）"></a>本地debug编译好的二进制apiserver （推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，编译好的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试.</p>
-<h3 id="1-编译apiserver"><a href="#1-编译apiserver" class="headerlink" title="1. 编译apiserver"></a>1. 编译apiserver</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make all WHAT=cmd/kube-apiserver DBG=1</span><br></pre></td></tr></table></figure>
-
-<p>更多编译命令可以直接查阅项目根目录下的Makefile</p>
-<h3 id="2-配置vscode-launch文件"><a href="#2-配置vscode-launch文件" class="headerlink" title="2. 配置vscode launch文件"></a>2. 配置vscode launch文件</h3><p>下面是我按照第一节方法创建的k8s集群的参数，设置的调试参数，本质上就是apiserver的启动参数。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch local executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;, </span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;--advertise-address=172.31.124.8&quot;,</span><br><span class="line">                &quot;--allow-privileged=true&quot;,</span><br><span class="line">                &quot;--authorization-mode=Node,RBAC&quot;,</span><br><span class="line">                &quot;--client-ca-file=/etc/kubernetes/pki/ca.crt&quot;,</span><br><span class="line">                &quot;--enable-admission-plugins=ServiceAccount&quot;,</span><br><span class="line">                &quot;--enable-bootstrap-token-auth=true&quot;,</span><br><span class="line">                &quot;--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt&quot;,</span><br><span class="line">                &quot;--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt&quot;,</span><br><span class="line">                &quot;--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key&quot;,</span><br><span class="line">                &quot;--etcd-servers=https://127.0.0.1:2379&quot;,</span><br><span class="line">                &quot;--kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt&quot;,</span><br><span class="line">                &quot;--kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key&quot;,</span><br><span class="line">                &quot;--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname&quot;,</span><br><span class="line">                &quot;--proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt&quot;,</span><br><span class="line">                &quot;--proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key&quot;,</span><br><span class="line">                &quot;--requestheader-allowed-names=front-proxy-client&quot;,</span><br><span class="line">                &quot;--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt&quot;,</span><br><span class="line">                &quot;--requestheader-extra-headers-prefix=X-Remote-Extra-&quot;,</span><br><span class="line">                &quot;--requestheader-group-headers=X-Remote-Group&quot;,</span><br><span class="line">                &quot;--requestheader-username-headers=X-Remote-User&quot;,</span><br><span class="line">                &quot;--secure-port=6443&quot;,</span><br><span class="line">                &quot;--service-account-issuer=https://kubernetes.default.svc.cluster.local&quot;,</span><br><span class="line">                &quot;--service-account-key-file=/etc/kubernetes/pki/sa.pub&quot;,</span><br><span class="line">                &quot;--service-account-signing-key-file=/etc/kubernetes/pki/sa.key&quot;,</span><br><span class="line">                &quot;--service-cluster-ip-range=10.96.0.0/12&quot;,</span><br><span class="line">                &quot;--tls-cert-file=/etc/kubernetes/pki/apiserver.crt&quot;,</span><br><span class="line">                &quot;--tls-private-key-file=/etc/kubernetes/pki/apiserver.key&quot;,</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;上述配置说明：</p>
-<ul>
-<li>${workspaceFolder} 为当前k8s所有的workspace目录，_output&#x2F;bin为在workspace目录下执行make后，二进制文件所在目录。</li>
-<li><font color=red>substitutePath配置非常重要</font>，用于将vscode调试用的代码路径映射到编译所使用的代码路径，这里由于使用k8s在make期间会将代码拷贝到_output&#x2F;local&#x2F;go&#x2F;src&#x2F;k8s.io&#x2F;kubernetes下，调试代码路径和编译代码路径不一致，所以需要进行映射。</li>
-<li>args配置项为启动apiserver的参数，参数直接来自于上一节使用kubeadm搭建的k8s后，生成的对应启动apiserver pod的yaml文件,一般会在&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml中, 复制command参数改写到args中即可。</li>
-</ul>
-<h3 id="3-启动调试"><a href="#3-启动调试" class="headerlink" title="3. 启动调试"></a>3. 启动调试</h3><p>注：由于kube-apiserver是以static pod类型启动的（在指定的节点上由kubelet 守护进程直接管理，不需要API 服务器监管）,所以只要kubelet在当前node启动了，就会默认检测&#x2F;etc&#x2F;kubernetes&#x2F;manifests下存在的pod拉起，所以要将&#x2F;etc&#x2F;kubernetes&#x2F;manifests&#x2F;kube-apiserver.yaml从&#x2F;etc&#x2F;kubernetes&#x2F;manifests移除。<br>选中需要的断点即可启动二进制开始调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug1.png" alt="debug1"></p>
-<h2 id="远程debug编译好的二进制apiserver"><a href="#远程debug编译好的二进制apiserver" class="headerlink" title="远程debug编译好的二进制apiserver"></a>远程debug编译好的二进制apiserver</h2><p>注：这里的本地指的是<font color=red>代码在本地的机器中，编译好的二进制文件在远程服务器</font>。使用本地vscode debug工具连接远端dlv工具启动好的debugger服务器进行调试。</p>
-<ol>
-<li>编译方法和上文方法相同</li>
-<li>配置vscode launch文件</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch remote executable api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;debugAdapter&quot;: &quot;dlv-dap&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;exec&quot;,</span><br><span class="line">            &quot;port&quot;: 12345,</span><br><span class="line">            &quot;host&quot;: &quot;127.0.0.1&quot;, // can skip for localhost</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/_output/bin/kube-apiserver&quot;,</span><br><span class="line">            &quot;substitutePath&quot;: [</span><br><span class="line">                &#123;</span><br><span class="line">                    &quot;from&quot;: &quot;$&#123;workspaceFolder&#125;&quot;,</span><br><span class="line">                    &quot;to&quot;: &quot;$&#123;workspaceFolder&#125;/_output/local/go/src/k8s.io/kubernetes&quot;,</span><br><span class="line">                &#125;,</span><br><span class="line">            ],</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">               // 参数和上文相同</span><br><span class="line">            ]</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ol start="3">
-<li>启动远程服务器上的delve服务器，这里用一台机器模拟，所以在本地启动</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dlv dap --listen=127.0.0.1:12345 </span><br></pre></td></tr></table></figure>
-
-<ol start="4">
-<li>启动调试<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug2.png" alt="debug2"></li>
-</ol>
-<h2 id="本地debug，未提前编译的apiserver（不推荐）"><a href="#本地debug，未提前编译的apiserver（不推荐）" class="headerlink" title="本地debug，未提前编译的apiserver（不推荐）"></a>本地debug，未提前编译的apiserver（不推荐）</h2><p>注：这里的本地指的是<font color=red>代码在远端服务器上，vscode的debug插件启动后才编译的二进制文件也在远程服务器中</font>。使用本地vscode remote插件打开远端服务器的kubernetes项目workspace进行调试。</p>
-<ol>
-<li>配置tasks.json文件（主要用于编译设置禁止内联和优化）</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;2.0.0&quot;,</span><br><span class="line">    &quot;tasks&quot;: [</span><br><span class="line">        &#123;</span><br><span class="line">            &quot;label&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;shell&quot;,</span><br><span class="line">            &quot;command&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                &quot;build&quot;,</span><br><span class="line">                &quot;-gcflags=all=-N -l&quot;, // 禁止编译优化</span><br><span class="line">                &quot;-o&quot;,</span><br><span class="line">                &quot;$&#123;workspaceFolder&#125;/__debug_bin&quot; // 编译后二进制的目录</span><br><span class="line">            ],</span><br><span class="line">            &quot;options&quot;: &#123;</span><br><span class="line">                &quot;cwd&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot; // 编译所在的目录</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ol start="2">
-<li>配置vscode launch.json文件。更多配置可以参考：<a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md#debug-a-package-test-as-root">vscode-go&#x2F;debugging官方文档</a></li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;version&quot;: &quot;0.2.0&quot;,</span><br><span class="line">    &quot;configurations&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">            &quot;name&quot;: &quot;Launch source api-server&quot;,</span><br><span class="line">            &quot;type&quot;: &quot;go&quot;,</span><br><span class="line">            &quot;request&quot;: &quot;launch&quot;,</span><br><span class="line">            &quot;mode&quot;: &quot;auto&quot;,</span><br><span class="line">            &quot;program&quot;: &quot;$&#123;workspaceFolder&#125;/cmd/kube-apiserver&quot;,</span><br><span class="line">            &quot;preLaunchTask&quot;: &quot;go: build (debug)&quot;,</span><br><span class="line">            &quot;args&quot;: [</span><br><span class="line">                // 参数上同</span><br><span class="line">            ]</span><br><span class="line">        &#125;    </span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ol start="3">
-<li>启动调试，此过程由于在启动debug之后，才会执行代码编译，所以会相对较慢<br><img src="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/debug3.png" alt="debug3"></li>
-</ol>
-<h2 id="vscode-debug-kube-scheduler配置"><a href="#vscode-debug-kube-scheduler配置" class="headerlink" title="vscode debug kube-scheduler配置"></a>vscode debug kube-scheduler配置</h2><p>kube-scheduler调度器的debug配置和kube-apiserver基本一致，这里直接列出一个默认的launch.json的配置文件(这里的scheduler启动参数使用默认kubeadm搭建的集群时的参数)，手把手debug kube-scheduler，以及深入顺理调度逻辑，可以后续系列文章。</p>
-<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><h2 id="关于使用service-account创建kubeconfig登录dashboard"><a href="#关于使用service-account创建kubeconfig登录dashboard" class="headerlink" title="关于使用service account创建kubeconfig登录dashboard"></a>关于使用service account创建kubeconfig登录dashboard</h2><p>实验下来，目前kubernetes dashboard必须通过创建service account登录，而无法直接通过X.509证书方式登录（即用此方式配置kubeconfig登录<a target="_blank" rel="noopener" href="https://devopstales.github.io/kubernetes/k8s-user-accounts/">How to create Users in Kubernetes the right way? - devopstales</a>），下面以v1.25.3为例创建sevice account方式，详细叙述创建kubeconfig方法。（注：网上很多教程是以v1.22之前的版本为基础，所以会有区别）</p>
-<ol>
-<li>创建seviceacount</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create serviceaccount &lt;service-account-name&gt;</span><br></pre></td></tr></table></figure>
-
-<ol start="2">
-<li>创建&#x2F;role&#x2F;rolebinding</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">kind: Role</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">rules:</span><br><span class="line">- apiGroups: [&quot;&quot;, &quot;extensions&quot;, &quot;apps&quot;]</span><br><span class="line">  resources: [&quot;*&quot;]</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">- apiGroups: [&quot;batch&quot;]</span><br><span class="line">  resources:</span><br><span class="line">  - jobs</span><br><span class="line">  - cronjobs</span><br><span class="line">  verbs: [&quot;*&quot;]</span><br><span class="line">---</span><br><span class="line">kind: RoleBinding</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;role-binding-name&gt;</span><br><span class="line">  namespace: default</span><br><span class="line">subjects:</span><br><span class="line">- kind: ServiceAccount</span><br><span class="line">  name: &lt;service-account-name&gt;</span><br><span class="line">  namespace: default </span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: Role</span><br><span class="line">  name: &lt;role-name&gt;</span><br><span class="line"># kubectl apply -f &lt;file.yaml&gt;</span><br></pre></td></tr></table></figure>
-
-<ol start="3">
-<li>创建serviceaccount token，这里需要注意在v.1.24版本之前，创建完serviceaccount后就会自动创建token，而本例使用的是v1.25版本，需要手动创建。具体可以参考<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/72256006/service-account-secret-is-not-listed-how-to-fix-it">kubernetes - Service account secret is not listed. How to fix it? - Stack Overflow &#x2F; Secrets | Kubernetes</a></li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Secret</span><br><span class="line">metadata:</span><br><span class="line">  name: xiaobaihesa-secret</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/service-account.name: &quot;&lt;service-account-name&gt;&quot;</span><br><span class="line">type: kubernetes.io/service-account-token</span><br></pre></td></tr></table></figure>
-
-<ol start="4">
-<li>创建kubeconfig</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-cluster &lt;cluster-name&gt; --insecure-skip-tls-verify=true --server=https://&lt;your-k8s-domain&gt;</span><br><span class="line">TOKEN=$(kubectl describe secrets &quot;$(kubectl describe serviceaccount &lt;service-account-name&gt; | grep -i Tokens | awk &#x27;&#123;print $2&#125;&#x27;)&quot; | grep token: | awk &#x27;&#123;print $2&#125;&#x27;)</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-credentials &lt;user-name&gt; --token=$TOKEN</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-name config set-context  &lt;context-name&gt;  --cluster=&lt;cluster-name&gt; --user=xiaobaihe</span><br><span class="line">kubectl --kubeconfig ~/.kube/config-namee config use-context &lt;context-name&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
-<li><a target="_blank" rel="noopener" href="https://github.com/golang/vscode-go/blob/master/docs/debugging.md">vscode-go&#x2F;debugging.md at master · golang&#x2F;vscode-go · GitHub</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/duyanghao/kubernetes-reading-notes/blob/master/debug/remote_debug.md">kubernetes-reading-notes&#x2F;remote_debug.md at master · duyanghao&#x2F;kubernetes-reading-notes · GitHub</a></li>
-<li><a target="_blank" rel="noopener" href="https://kubernetes.renkeju.com/deploy/A.2.3.cluster-initialization.html">A.2.3 集群初始化 · Kubernetes Documentation</a></li>
-</ol>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
     <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -894,7 +179,10 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境</a>
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">从CUDA兼容性与GPU容器角度以及k8s深入掌控深度学习环境</a>
         </h2>
 
         <div class="post-meta-container">
@@ -905,14 +193,7 @@
       </span>
       <span class="post-meta-item-text">Posted on</span>
 
-      <time title="Created: 2023-10-17 16:51:36" itemprop="dateCreated datePublished" datetime="2023-10-17T16:51:36+08:00">2023-10-17</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2023-10-18 13:40:58" itemprop="dateModified" datetime="2023-10-18T13:40:58+08:00">2023-10-18</time>
+      <time title="Created: 2022-03-17 00:00:00" itemprop="dateCreated datePublished" datetime="2022-03-17T00:00:00+08:00">2022-03-17</time>
     </span>
 
   
@@ -940,78 +221,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>太长不想看全文，看这里-&gt;：1. CUDA runtime之于driver向后兼容原则，任何指定的CUDA版本都有一个与之对应的最小GPU driver版本。2.GPU的容器来说，容器中的CUDA版本受宿主机的GPU driver限制</p>
-</blockquote>
-<p>&emsp;&emsp;虽然我并不研究深度学习的算法，但是作为相关训练平台的使用者和搭建者，很多同学都会问我这些问题。“我的训练镜像是用的pytorch是cuda11的，那我的任务在如何才能分配到一台支持cuda11的GPU容器中”，”我使用训练平台1和训练平台2训练任务（因为公司内部有两个完全训练平台，这里分别用1和2表示），可是同样的镜像和代码，在平台2可以正常运行，但是平台1有的时候运行出错”。说真的每次碰到这种问题，我头很大，我不知道应该从什么地方说起，本文就是从一个新手的视角出发，并从兼容性原则和容器方向说说，这些运行时环境相关的问题是怎么决定我们的代码运行的。</p>
-<h1 id="先问自己两个问题"><a href="#先问自己两个问题" class="headerlink" title="先问自己两个问题"></a>先问自己两个问题</h1><ol>
-<li>nvidia-smi命令中返回的CUDA Version和Driver Version的关系，以及和我运行机器&#x2F;镜像中的安装的cuda库版本之间的关系？</li>
-</ol>
-<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_driver.jpg" alt="图1"></p>
-<ol start="2">
-<li>在容器(例如使用docker创建的容器)中通过GPU训练，容器镜像到底需要安装什么？镜像中需要安装GPU驱动吗？</li>
-</ol>
-<p>&emsp;&emsp;我认为很多的由于训练环境导致的训练异常，都可以从这两个问题的回答中找到原因，进而更快的定位异常点。下面我围绕这两个问题，详细的做一个回答。</p>
-<h1 id="基础概念"><a href="#基础概念" class="headerlink" title="基础概念"></a>基础概念</h1><p>&emsp;&emsp;CUDA本质上就是NVIDIA专为通用高性能并行计算设计的一套计算平台和编程模型，换句话使用GPU并行编程的规范方法，所以CUDA在软件层面包含了众多库， 那这里我们用一张图来简单阐述CUDA的各类运行时以及库的关系。</p>
-<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_runtime_structure.jpg" alt="图2"></p>
-<p>&emsp;&emsp;从最底层开始CUDA Driver（也就是常说的GPU驱动）：可以认为是最底层的操作GPU的接口，作为直接与GPU设备打交道，其编程难度很大，但是性能更好。而CUDA Runtime（也就是常说的CUDA库）：更多是面向CUDA应用开发人员，其API更加简化，可编程性更高，而基于CUDA Runtime接口再向上封装了更多的面向专用计算场景的库，例如专用于深度学习的cuDNN库等。最后，应用层可以使用CUDA Library或者直接使用CUDA Runtime API实现其功能。</p>
-<p>&emsp;&emsp;我们都知道想要使用GPU训练程序，那么必须要从nividia官方选择安装对应GPU机型的驱动文件。而官方提供的是一个叫做CUDA toolkit打包的东西，这个本质上是CUDA相关库和工具的集合，例如你如果选择<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile">runfile方式安装</a>，从官方下载下来的run文件（eg：cuda_11.0.3_450.51.06_linux.run），本身其中包括了CUDA Runtime（CUDA库），CUDA Driver （GPU驱动），还有样例代码，用户可以通过命令选择，需要安装CUDA库还是GPU驱动，还是说两者都安装。</p>
-<p>&emsp;&emsp;另外nvidia-smi本质上是直接使用CUDA driver库，所以说和系统中安装的CUDA Runtime（即CUDA版本）无关.</p>
-<h1 id="回答上方的问题"><a href="#回答上方的问题" class="headerlink" title="回答上方的问题"></a>回答上方的问题</h1><h2 id="1-归根还是CUDA-Version-Driver-Version-兼容原则"><a href="#1-归根还是CUDA-Version-Driver-Version-兼容原则" class="headerlink" title="1. 归根还是CUDA Version&#x2F;Driver Version&#x2F;兼容原则"></a>1. 归根还是CUDA Version&#x2F;Driver Version&#x2F;兼容原则</h2><p>&emsp;&emsp;本质上第一个问题，回答的就是上述驱动和CUDA运行时库之间的兼容性的问题。</p>
-<p>&emsp;&emsp;nvidia-smi中显示的CUDA Version本质上是DRIVER API COMPATIBILITY VERSION，换句话理解就是<font color=red>根据机器上当前GPU的Driver驱动版本，CUDA Version显示的是与驱动匹配的最高兼容的CUDA Runtime版本</font>（下文都我们简称CUDA Runtime为CUDA，简单理解就是你可以在机器中安装的cuda动态&#x2F;静态链接库的最高版本，CUDA driver简称为driver或驱动）。下面从源码&#x2F;二进制&#x2F;cubin三个角度具体说说兼容性，这有助于更好的排查“为什么我的训练代码在这台机器上跑不起来”的问题。</p>
-<h3 id="兼容性原则一：源码级别不兼容性"><a href="#兼容性原则一：源码级别不兼容性" class="headerlink" title="兼容性原则一：源码级别不兼容性"></a>兼容性原则一：源码级别不兼容性</h3><p>&emsp;&emsp;所谓源码不兼容很好理解，例如用户的代码是基于cuda 10.1这一特定版本对应的API库构建的，那么如果用户升级到cuda11.0的对应API库，则可能无法正常运行。需要用户根据cuda11.0对应的API文档修改代码再进行编译构建。所以我们可以看到pytorch，针对不同的cuda版本，都有对应不同的编译后的库，例如下面两个就是分别基于cuda11.1（<a target="_blank" rel="noopener" href="https://download.pytorch.org/whl/cu113/torch-1.10.1%2Bcu113-cp37-cp37m-linux_x86_64.whl">torch-1.10.1%2Bcu113-cp37-cp37m-linux_x86_64.whl</a>）和cuda11.3（<a target="_blank" rel="noopener" href="https://download.pytorch.org/whl/cu111/torch-1.10.0%2Bcu111-cp36-cp36m-linux_x86_64.whl">torch-1.10.0%2Bcu111-cp36-cp36m-linux_x86_64.whl</a>）不同的cuda版本构建的。</p>
-<h3 id="兼容原则二：后向兼容"><a href="#兼容原则二：后向兼容" class="headerlink" title="兼容原则二：后向兼容"></a>兼容原则二：后向兼容</h3><p>&emsp;&emsp;后向兼容的意思是：如果一个程序使用的CUDA版本可以在某一Driver版本下运行，那么在升级了Driver后，此程序在保持原CUDA版本的情况下，仍然可以在新的更高版本的驱动下运行。换句话说，某一具体的cuda版本存在与之对应的最小驱动版本。而对于cuda11和cuda10这两个主版本下，兼容的情况也有细微的却别。兼容性对照表可以查看。</p>
-<p>&emsp;&emsp;<font color=red>1. 对于cuda11主版本 </font>（cuda版本是X.Y.X三段式，其中X为主版本号，Y为次版本号），那么对于以11开头的所有CUDA版本来说，只要driver版本&gt;&#x3D;450.80.02*, 则即可满足所有的CUDA11.0,11.1,11.2等以11.x开头的CUDA运行时版本。这种兼容模式称作为为次版本兼容（Minor Version Compatibility）。当然这种兼容是“limited feature-set”，换句话说满足在保持驱动不变下，升级cuda版本后，运行不出错，但是对于一些高版本的cuda的特性，如果要更好的使用或者性能，也需要升级driver驱动。比如对于cuda11.2，官方的cuda toolkit包中推荐安装的driver是&gt;&#x3D;460.00。</p>
-<p>&emsp;&emsp;回到上面的问题1，我们用的云开发GPU是一个vGPU实例，把Tesla T4 从一个GPU虚拟化出两个vGPU分配给两台虚拟机，nvidia-smi显示Driver Version为450.102.04，而CUDA Version显示的是11.0，通过上文的说明，可以发现此虚拟机支持包括11.x在内的所有cuda11版本，而CUDA Version显示的可以认为是最高兼容的CUDA“主版本”。这里验证的方法也很简单，可以在云开发GPU机器中安装任意的cuda10.x&#x2F;cuda11.x，通过编译cuda sampler示例中的deviceQuery程序验证。</p>
-<table>
-<thead>
-<tr>
-<th>cuda10.1</th>
-<th>cuda11.0</th>
-<th>cuda11.2</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda10.1.jpg" alt="cuda10.1"></td>
-<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda11_0.jpg" alt="cuda11.0"></td>
-<td><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda11_2.jpg" alt="cuda11.2"></td>
-</tr>
-</tbody></table>
-<p>&emsp;&emsp;<font color=red>2. 对于cuda10这主版本</font>，每一个cuda10.x的版本都有与之对应的最小驱动版本号，例如下图是截取自<a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a>。可以看到cuda10.0&#x2F;10.1&#x2F;10.2对应的最小满足的版本号均不一样，不同于cuda11.x，可以在驱动不变的情况下升级cuda，cuda10.x，想要升级从10.1升级到10.2，那么驱动版本必须要大于等于440.33。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/cuda_table.jpg" alt="cuda_table"></p>
-<p>&emsp;&emsp;当我们公司的训练平台1创建一个”所谓的”cuda_version版本为10.2的任务，那么分配给我们的机器对应的driver版本号为440.64.00，那么假如我们安装cuda11.2，则显而易见编译后运行上文的deviceQuery程序会返回错误。</p>
-<p><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/devicequery.jpg" alt="device_query"></p>
-<p>&emsp;&emsp;而对于GPU来说，虚拟机中的驱动都是450.102.04，因此可以支持任意cuda11及以下的CUDA Runtime。</p>
-<h3 id="兼容原则三：有限的前向兼容"><a href="#兼容原则三：有限的前向兼容" class="headerlink" title="兼容原则三：有限的前向兼容"></a>兼容原则三：有限的前向兼容</h3><p>&emsp;&emsp;后向兼容是需要在cuda升级后，驱动也需要根据要求进行升级（或者不变）。而前向兼容的意思就是，在cuda升级后，driver不需要对内核态相关包进行升级，而只需要变更相关用户态文件即可。目的就是可以在老旧驱动上基于新的cuda版本编译程序，从而获取到最新的cuda特性。 而为什么说是有限的兼容，主要表现在两点限制：1. 限制了GPU卡的类型，只有NVIDIA Data Center&#x2F;Tesla 系列（和小部分特殊的RTX）的GPU卡. 2. 前向兼容的能力理论上只有在需要跨cuda主版本的时使用，例如本来最高只支持cuda版本10.1的Driver418，可以通过安装正确的Compat Package,使其在不更新内核态驱动的情况，支持cuda10.1~cuda11.6。具体可以参考官方文档的前向兼容矩阵，来下载安装对应的兼容包。<a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a></p>
-<h3 id="兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容"><a href="#兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容" class="headerlink" title="兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容"></a>兼容性原则四：cuda应用程序编译产物与不同GPU架构间的兼容</h3><p>&emsp;&emsp;这部分的兼容性原则理解起来，需要涉及到cuda应用程序编译的相关知识。一个写好的cuda程序，通过nvcc编译后的产物可以包含两种形式，一个是二进制的cubin对象，另一个是PTX（Parallel Thread Execution）汇编代码。</p>
-<p>&emsp;&emsp;cubin是特定于指定的GPU架构的，cubin二进制对象对于GPU架构的计算能力（计算能力只是代表一个GPU的能力特性与性能高低无关）是一个向后兼容的，并且对GPU计算能力也是类似Minor Version Compatibility，换句话说，为计算能力为X.y的GPU生成的cubin对象，只能在计算能力为X.z且z&gt;&#x3D;y的GPU上运行。举个例子：为7.0计算能力生成的cubin，可以在7计算能力为7.5的GPU上执行，但是无法在计算能力为8.0的GPU上执行。</p>
-<p>&emsp;&emsp;那对于编译成PTX形式的产物，在cuda应用程序运行加载时，会先由设备驱动程序进一步把PTX通过JIT技术（即时编译）编译成对应GPU架构或者计算能力的cubin，这也就意味着此PTX可以在计算能力高于当前生成的此PTX计算能力的GPU上运行。关于更多JIT的内容可以参考：<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#just-in-time-compilation">Programming Guide :: CUDA Toolkit Documentation</a></p>
-<p>&emsp;&emsp;因此，如果一个cuda应用程序在编译时选择包含PTX相关产物，“理论上”可以更好的保证在GPU架构升级后，代码仍然可以兼容运行，换句话说，”理论”上一个原先使用cuda10.x编译且可以在Volta架构V100上运行的应用，选择选择生成PTX二进制代码，那么可以在Ampere架构的A100上运行。</p>
-<p>&emsp;&emsp;但是回到一个具体的案例，事实上对于pytorch，由于受制于使用的cuDNN与GPU架构升级的兼容的原因（cuDNN7与Ampere架构不兼容），以及pytorch使用pip wheel安装或者conda安装（pytorch在编译过程根据不同的安装方式会选择不同的编译模式，例如conda安装会选择使用包含PTX的二进制版本，而pip wheel安装可能不会包含），想要使用A100机器训练，必须升级到cuda11且cuDNN8以上版本的pytorch来可以使用。</p>
-<p>&emsp;&emsp;换句话说，GPU的架构在一定程度上限制了cuda的版本（注：计算能力只是代表一个GPU的能力特性与性能高低无关）关于更多关于编译链接的内容，可以参考官网文档：<a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html">NVCC :: CUDA Toolkit Documentation</a></p>
-<h2 id="2-归根还是容器中”挂载”宿主机的”文件”"><a href="#2-归根还是容器中”挂载”宿主机的”文件”" class="headerlink" title="2. 归根还是容器中”挂载”宿主机的”文件”"></a>2. 归根还是容器中”挂载”宿主机的”文件”</h2><p>&emsp;&emsp;要回答第二个问题，其实就是理解我们训练时候容器中CUDA 运行时所用的GPU驱动（或者说是CUDA driver API）到底是宿主机的驱动文件还是镜像中的驱动文件。这里可以用云开发GPU机器上的docker来作为观察对象。</p>
-<p>&emsp;&emsp;我使用的云开发GPU机器中已经安装了的docker，事实上是把原来底层用来通过操作系统调用创建运行容器的“runc”组件替换为nvidia-container-runtime组件（关于runC的一些概念，可以参考之前的<a href="./%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6.html">从kubernetes中容器生态窥探设计模式的哲学</a>），当然nvidia-contianer-runtime本质上是一个做了修改后的runc组件，区别是它增加了一个自定义的prestart hook，目的是在创建容器后，在启动容器前，调用这个hook，而这个hook本身做的就是一些类似将宿主机的device&#x2F;driver文件等挂载进容器中。下图为NVIDIA官网介绍NVIDIA Container的大致架构组件图。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/gpu_container.jpg" alt="gpu_container"></p>
-<p>&emsp;&emsp;那到底具体将宿主机的哪些设备文件挂载进了容器呢。我们可以打开nvidia-container-runtime的debug功能，详细在其日志中查看所有文件设备挂载列表，具体为修改&#x2F;etc&#x2F;nvidia-container-runtime&#x2F;config.toml文件</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[nvidia-container-cli]</span><br><span class="line">environment = []</span><br><span class="line">debug = &quot;/var/log/nvidia-container-toolkit.log&quot;</span><br><span class="line">load-kmods = true</span><br><span class="line">ldconfig = &quot;@/sbin/ldconfig&quot;</span><br><span class="line">[nvidia-container-runtime]</span><br><span class="line">debug = &quot;/var/log/nvidia-container-runtime.log&quot;</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;打开debug功能后，我们重新通过docker 启动一个容器</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run  --rm --gpus &#x27;&quot;device=0&quot;&#x27; --net host  -it mirrors.tencent.com/shadow_test_xiaobaihe/test_for_light:torch_ptx /bin/bash</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;启动成功后，我们发现可以使用nvidia-smi命令查看挂载进容器的GPU情况。明明我的镜像中没有nvidia-smi这个二进制程序，为什么启动后文件就可以直接使用呢？那么秘密事实上就在nvidia-container-toolkit这个prehook内帮我们完成了。打开上方的&#x2F;var&#x2F;log&#x2F;nvidia-container-toolkit.log文件，可以详细的查询到整个hook过程。</p>
-<p>&emsp;&emsp;其中我们发现，hook过程中向容器中注入了包括宿主机的二进制工具，例如nivida-smi&#x2F;nvida-debugdump等，宿主机的上的库，例如很重要的CUDA Driver API库libcuda.so。另外还有很重要的是在宿主机中通过mknod创建所需的nvidia相关的设备文件，并将宿主机的文件设备文件注入到容器中。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 注入宿主机的二进制程序</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.228302 19802 nvc_mount.c:112] mounting /usr/bin/nvidia-smi at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/bin/nvidia-smi</span><br><span class="line">I0311 03:09:13.228326 19802 nvc_mount.c:112] mounting /usr/bin/nvidia-debugdump at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/bin/nvidia-debugdump</span><br><span class="line"></span><br><span class="line"># 注入宿主机的CUDA Driver库</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.228463 19802 nvc_mount.c:112] mounting /usr/lib64/libcuda.so.450.102.04 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/lib64/libcuda.so.450.102.04</span><br><span class="line">I0311 03:09:13.228484 19802 nvc_mount.c:112] mounting /usr/lib64/libnvidia-opencl.so.450.102.04 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e78fbd25ce10eb4ac52aeccac393d6645220770f/merged/usr/lib64/libnvidia-opencl.so.450.102.04</span><br><span class="line"></span><br><span class="line"># 创建设备文件，并将宿主机设备文件注入到容器中</span><br><span class="line"></span><br><span class="line">I0311 03:09:13.207136 19807 nvc.c:282] running mknod for /dev/nvidia0</span><br><span class="line">I0311 03:09:13.228019 19802 nvc_info.c:705] listing device /dev/nvidia0 (GPU-40143293-c4ff-11eb-ba91-04c440212a27 at 000000    00:00:09.0)</span><br><span class="line">I0311 03:09:13.280933 19802 nvc_mount.c:208] mounting /dev/nvidia0 at /data/dockerimages/overlay2/05f25c9dde0a3cad98c5ec03e    78fbd25ce10eb4ac52aeccac393d6645220770f/merged/dev/nvidia0</span><br></pre></td></tr></table></figure>
-
-<p>&emsp;&emsp;由此可以看到在使用nvidia-contiainer-runtime这种容器使用GPU的解决方案方案下，容器中使用CUDA Driver还有nvidia-smi都是来自于宿主机的，不需要在镜像中安装CUDA Driver。而如果在镜像中包含了CUDA driver库，可能会导致容器在hook过程中，在建立libcuda.so软链时，使用镜像中的driver库，从而可能触发上文说的”前向兼容”流程（即有可能镜像中使用的用户态的driver驱动高于宿主机的内核态的启动，从而使得GPU认为应该用前向兼容），而往往前向兼容是比较有限的，受制于GPU机型，还有驱动版本等，从而导致报错，例如可能出现forwoard compatibilty报错。</p>
-<h1 id="回到训练平台"><a href="#回到训练平台" class="headerlink" title="回到训练平台"></a>回到训练平台</h1><p>&emsp;&emsp;根据第二个问题的答案，这就是为什么我们在各种平台训练的时候，镜像中都只需要打包CUDA Runtime和CUDA Libraries即可，而不需要存在驱动的相关库。因为训练容器使用的本身是宿主机上的驱动库。</p>
-<p>&emsp;&emsp;而至于为什么同样的镜像和代码，在平台2可以正常运行，但是在平台1有的时候运行出错。这主要是因为不同平台所处集群中的机器驱动并不都是最新的，有一些机器驱动还是440只能到最高支持cuda10.2，而有的机器的驱动已经是450，可以支持到cuda11.x，而根据上文说的兼容性原则，如果镜像中使用的CUDA runtime库是cuda11，而实际上平台分配到的机器驱动只有440，那么根据上述的向后兼容原则，肯定是不行的，所以需要在训练平台1中强制指定cuda_version参数为11.0。平台2总是支持的原因，也在于其GPU宿主机的机器驱动比较新，都是支持cuda11.x的。</p>
-<h2 id="在训练平台中训练任务"><a href="#在训练平台中训练任务" class="headerlink" title="在训练平台中训练任务"></a>在训练平台中训练任务</h2><p>&emsp;&emsp;现在往往大多数公司的训练平台都是基于kubernetes平台所搭建的，甚至在一个公司内部下的GPU集群是由多个k8s集群所组成的，在其之上，不同部门都会搭建自己不同的训练平台。例如本例中的平台1和平台2，其算力都来自于最底层的k8s集群。不同的训练平台，可以看做是不同的k8s租户，通过不同的的方案，来实现一个训练任务的资源创建。</p>
-<p>&emsp;&emsp;在一年前，大模型还没有像如今这么繁荣的情况下，主要使用的k8s中的<a target="_blank" rel="noopener" href="https://www.redhat.com/zh/topics/containers/what-is-a-kubernetes-operator">Operator</a>来定制我们训练任务的多机多卡Pod以及网络的等组合方式，使用kubeflow&#x2F;mpi-operator方式，来创建满足all-reduce方式的通用任务。通过mpi-operator并配合k8s的CRD（CRD–custom resource definition）来引用MPIJob这个新的对象类型，换句话说训练平台在创建一个任务后通过Operator创建对应CR(custom resource)进行调度。这种方法更接近与云原生的kubeflow，同事可以通过Operator方式，扩展使用Pytorch-Operator&#x2F;Tensorflow-Operator等（目前的mpi-operator服务于类horovod并行训练）。<br><img src="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/k8s_operator_structure.png" alt="k8s_operator"></p>
-<h1 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h1><ol>
-<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/deploy/cuda-compatibility/">CUDA Compatibility :: NVIDIA Data Center GPU Driver Documentation</a></li>
-<li><a target="_blank" rel="noopener" href="https://forums.developer.nvidia.com/t/how-to-use-cuda-compatibility-package-to-use-a-newer-driver-on-an-older-kernel-module/77533/4">https://forums.developer.nvidia.com/t/how-to-use-cuda-compatibility-package-to-use-a-newer-driver-on-an-older-kernel-module/77533/4</a></li>
-<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#cuda-compatibility-and-upgrades">Best Practices Guide :: CUDA Toolkit Documentation</a></li>
-<li><a target="_blank" rel="noopener" href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/arch-overview.html#arch-overview">Architecture Overview &mdash; NVIDIA Cloud Native Technologies documentation</a></li>
-</ol>
-
+          <p>太长不想看全文，看这里->：1. CUDA runtime之于driver向后兼容原则，任何指定的CUDA版本都有一个与之对应的最小GPU driver版本。2.GPU的容器来说，容器中的CUDA版本受宿主机的GPU driver限制</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E4%BB%8ECUDA%E5%85%BC%E5%AE%B9%E6%80%A7%E4%B8%8EGPU%E5%AE%B9%E5%99%A8%E8%A7%92%E5%BA%A6%E4%BB%A5%E5%8F%8Ak8s%E6%B7%B1%E5%85%A5%E6%8E%8C%E6%8E%A7%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0%E7%8E%AF%E5%A2%83/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1055,7 +273,10 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/" class="post-title-link" itemprop="url">从kubernetes中容器生态窥探设计模式的哲学</a>
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/" class="post-title-link" itemprop="url">从kubernetes中容器生态窥探设计模式的哲学</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1066,23 +287,7 @@
       </span>
       <span class="post-meta-item-text">Posted on</span>
 
-      <time title="Created: 2023-10-17 15:07:35" itemprop="dateCreated datePublished" datetime="2023-10-17T15:07:35+08:00">2023-10-17</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2023-10-18 15:05:01" itemprop="dateModified" datetime="2023-10-18T15:05:01+08:00">2023-10-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BA%91%E5%8E%9F%E7%94%9F/" itemprop="url" rel="index"><span itemprop="name">云原生</span></a>
-        </span>
+      <time title="Created: 2022-04-10 00:00:00" itemprop="dateCreated datePublished" datetime="2022-04-10T00:00:00+08:00">2022-04-10</time>
     </span>
 
   
@@ -1110,47 +315,1028 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <blockquote>
-<p>CRI&#x2F;CRI-O&#x2F;OCI&#x2F;containerd&#x2F;Docker&#x2F;runc…这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
-</blockquote>
-<p>容器生态包含了大量的行业专业术语，并且这些可能会让初次踏入的人迷惑甚至混淆的术语，都和容器生态的大公司之间的相互博弈的结果息息相关。而正是这些大公司博弈后制定的标准，使得kubernetes生态系统在不同厂商甚至操作系统之间可以更具灵活性，减少对单个公司项目的依赖。</p>
-<h2 id="从-Docker-容器-开始"><a href="#从-Docker-容器-开始" class="headerlink" title="从 Docker !&#x3D; 容器 开始"></a>从 Docker !&#x3D; 容器 开始</h2><p>容器本质上一种轻量级的虚拟化技术，通俗的讲提供应用程序一个被隔离的可运行的环境，并且这个环境可以方便的移植部署到其他地方，那么既然是技术，那么做到上述的要求的实现可以是多种多样的，不同的厂商公司可以按照他们的理解去实现这套虚拟化技术，也就出现后文所说的Kata容器&#x2F;gVisor等。而Docker可以认为是包含了容器的一种实现技术（runc），容器镜像，以及一切运行应用程序所需要的“配套设施”，它是对于应用开发的用户来说，体验友好的配套方案和工具集合。<br>然后，随着kubernetes的蓬勃发展，越来越多的公司开始使用kubernetes来管理集群和应用，这也导致不同公司希望根据自己理解和需求使用不同的容器技术来运行应用。换句话说kubernetes和容器底层实现是相互解耦的，那么想要做到这两者的解耦，入手就是从制定接口或者规范开始。</p>
-<h2 id="从-接口与规范-到-具体实现"><a href="#从-接口与规范-到-具体实现" class="headerlink" title="从 接口与规范 到 具体实现"></a>从 接口与规范 到 具体实现</h2><p>简单了解kubernetes可以知道，创建一个pod本质上就是通过RESTful api请求api-server，然后kubernetes根据控制层（control plane）来决定此pod如何编排，并最终将创建的请求移交给集群中的某一台node上的kubelet，也就是说从kubelet开始创建真实的容器。</p>
-<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/k8s_structure.jpg" alt="图1"></p>
-<center>图1</center>
+          <p>CRI/CRI-O/OCI/containerd/Docker/runc...这些与kubernetes容器生态相关的各种术语总有一款会让初来乍到的你混淆不清。但是当我细细梳理了这些词汇之间的关系后，似乎发现了一些隐藏在大厂之间的博弈后留下的设计模式哲学。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
 
-<p>从kubelet开始，请求会先经过CRI（Container Runtime Interface）—- High Level Runtime 传递下去，然后再经过OCI （Open Container Initiative）规范实现的 —- Low Level Runtime 创建和启动一个容器。<strong>似乎</strong>整个流程就是<strong>kubelet-&gt;CRI-&gt;OCI-&gt;container</strong>，但是这些运行时作用和本质到底是什么，为什么要这样设计，我们围绕下面这张图来阐述。</p>
-<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/cri_oci.jpg" alt="图2"></p>
-<center>图2</center>
+    
+    
+    
 
-<h3 id="CRI：-本质就是一个protobuf定义的rpc接口"><a href="#CRI：-本质就是一个protobuf定义的rpc接口" class="headerlink" title="CRI： 本质就是一个protobuf定义的rpc接口"></a>CRI： 本质就是一个protobuf定义的rpc接口</h3><p>CRI 定义在kubernetes项目中kubelet下（kubelet&#x2F;apis&#x2F;cri&#x2F;runtime&#x2F;v1alpha2&#x2F;api.proto）这些接口包括了两个Service, 一个是专门用于管理容器的接口集合，包括create&#x2F;stop&#x2F;start&#x2F;remove&#x2F;list等操作，而另一个专门负责镜像管理接口集合，包括pull&#x2F;remove&#x2F;list等操作。<p><br>既然定义了rpc接口，肯定会有client端和server端，所以从kubernetes的角度看，CRI的client就集成在kubelet内，而server端就是基于CRI定义的操作集合实现的各类所谓的High Level Runtime, 换句话就是从上游kubelet拿到gRPC请求，然后根据请求向下执行接口声明的众多操作，其中一些操作例如镜像管理，当前的High Level Runtime可以处理完成，而涉及到运行真实的容器则需要将请求转交给下面的Low Level Runtime，也就对应下文说的OCI的实现。<p><br>既然定义了CRI这个接口，<strong>那么实现这个接口的服务端也可以是不一样的</strong>。因此也就有了containerd和CRI-O两种实现。containerd来自于Docker, 并且目前通过一种CRI plugin的方式使其与CRI接口兼容。类似一个rpc服务端，是一个守护进程，等待上游的rpc请求，收到请求后可以<strong>推送&#x2F;拉取镜像，管理存储网络，并且创建&#x2F;运行&#x2F;监控容器的运行</strong>等功能。与containerd相对应的CRI-O是另一个由Ret-hat发起的，更加精简的实现方案。正如上文所说，无论CRI接口怎么实现，其中都要有能力创建运行的真正的容器，即会将请求移交到更低级别运行时处理，例如操作系统这一层应该如何创建，使用的镜像应该符合什么标准。这些都需要有一个规范来约束，从而使各个厂商根据不同的需求实现的容器都可以兼容CRI实现层。这个时候OCI这个概念就应运而生了。</p>
-<h3 id="开放容器标准只是一个规定"><a href="#开放容器标准只是一个规定" class="headerlink" title="开放容器标准只是一个规定"></a>开放容器标准只是一个规定</h3><p>OCI规定了容器应该如何运行，包括哪些状态，生命周期的管理标准，以及容器镜像标准大概是什么，具体细则可以<a target="_blank" rel="noopener" href="https://github.com/opencontainers/runtime-spec/blob/main/spec.md">参考此链接</a>。既然OCI是一个标准，那么肯定也有对应这个标准的众多实现，其中runc就是第一个符合OCI各项规范和标准的参考实现（reference implementation）。换言之，runc会用Linux内核系统调用（cgroup&#x2F;namespace）创建操作容器。当然除了runc是一个实现外，现在比较知名的kata-container runtime以及google的gVisor也是OCI规范的一个实现，区别点就在后两者是强隔离容器，即容器运行在一个类似轻量级的虚拟机内，一个容器属于一个轻量级虚拟机，对于多租户平台上的用户有着更高的安全性（无法从一个容器内部攻击宿主机或者其他租户容器）。</p>
-<p>
-让我们再回到CRI，docker本身是先于kubernetes出现的，在最早没有CRI的时候，docker可以认为是被固定到kubernetes上的，那么固定的方法就是通过一个dockershim的组件，来桥接kubelet和docker之间的交互。然而kubernetes从v1.20开始正式放弃对Docker的支持（当然放弃支持并不是不能在kubernetes集群中使用docker集成的运行时，而是指不建议将docker作为底层运行时，即不使用dockershim和docker daemon这套集成运行时，但是仍然可以使用OCI标准中规定符合镜像要求的docker镜像），也从侧面看出CRI的出现，让kubernetes可以兼容不同的High Level Runtime，让不同的厂商分得一杯羹。下图中分别描述了经典kubelet与Docker的集成方案和现在选择containerd实现的CRI运行时配合某一oci实现的运行时的集成方案的区别，对于后者可以将containerd替换成上文说的CRI-O，并且oci runtime也可以任意选择不同厂商的容器实现方案。
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
 
-<p><img src="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/runtime.jpg" alt="图3"><br> <center>图3</center></p>
-<h2 id="巧妙的桥接模式"><a href="#巧妙的桥接模式" class="headerlink" title="巧妙的桥接模式"></a>巧妙的桥接模式</h2><p>仔细的在查看一下图2，是不是很像设计模式中的”桥接模式”。下面是桥接模式的一个定义。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- 桥接是一种结构型设计模式，可将业务逻辑或一个大类拆分为不同的层次结构， 从而能独立地进行开发。</span><br><span class="line">- 层次结构中的第一层 （通常称为抽象部分） 将包含对第二层 （实现部分） 对象的引用。</span><br><span class="line">- 抽象部分将能将一些 （有时是绝大部分） 对自己的调用委派给实现部分的对象。 所有的实现部分都有一个通用接口， 因此它们能在抽象部分内部相互替换。</span><br></pre></td></tr></table></figure>
 
-<p>根据上面的定义，再来对照CRI和OCI，两者对应的两个不同层次结构，一个是High Level Runtime,一个是Low Level Runtime, 其中CRI抽象层包含了OCI实现对象的引用。CRI和OCI都是抽象层，并且对自己的调用都会委派给各自实现部分的对象。并且也是最重要的，他们能在抽象部分内部相互替换，换句话CRI的实现可以和OCI的实现相互组合，组合方式甚至理论上可以m*n种（m表示CRI的实现数量，n表示OCI实现数量）。如果用go语言来模拟CRI和OCI之间的关系，可以大致代码如下表示。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line">package main</span><br><span class="line"></span><br><span class="line">import &quot;fmt&quot;</span><br><span class="line"></span><br><span class="line">// CRI抽象层</span><br><span class="line">type CRI interface &#123;</span><br><span class="line">    createContainer()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">//  OCI抽象层</span><br><span class="line">type OCI interface &#123;</span><br><span class="line">    runRealContainer()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// containerd --- 对应CRI实现层（struct嵌套interface）</span><br><span class="line">type Containerd struct &#123;</span><br><span class="line">    OCI OCI</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c *Containerd) createContainer() &#123;</span><br><span class="line">    fmt.Println(&quot;use containerd as high level runtime&quot;)</span><br><span class="line">    c.OCI.runRealContainer()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// CRIO --- 对应CRI实现层</span><br><span class="line">type CRIO struct &#123;</span><br><span class="line">    OCI OCI</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c *CRIO) createContainer() &#123;</span><br><span class="line">    fmt.Println(&quot;use CRI-O as high level runtime&quot;)</span><br><span class="line">    c.OCI.runRealContainer()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// Runc --- 对应OCI实现层</span><br><span class="line">type Runc struct &#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (r *Runc) runRealContainer() &#123;</span><br><span class="line">    fmt.Println(&quot;use runc to run container&quot;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// kata --- 对应另一种OCI实现层</span><br><span class="line">type Kata struct &#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (k *Kata) runRealContainer() &#123;</span><br><span class="line">    fmt.Println(&quot;use kata to run container&quot;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// 模拟真实过程</span><br><span class="line">func main() &#123;</span><br><span class="line">    runc := &amp;amp;Runc&#123;&#125;</span><br><span class="line">    containerd_runc := &amp;amp;Containerd&#123;OCI: runc&#125;</span><br><span class="line">    containerd_runc.createContainer()</span><br><span class="line">    fmt.Println(&quot;------------------------&quot;)</span><br><span class="line">    containerd_oci := &amp;amp;Containerd&#123;OCI: &amp;amp;Kata&#123;&#125;&#125;</span><br><span class="line">    containerd_oci.createContainer()</span><br><span class="line">    fmt.Println(&quot;------------------------&quot;)</span><br><span class="line">    ocio_runc := &amp;amp;CRIO&#123;OCI: runc&#125;</span><br><span class="line">    ocio_runc.createContainer()</span><br><span class="line">    fmt.Println(&quot;------------------------&quot;)</span><br><span class="line">    crio_oci := &amp;amp;CRIO&#123;OCI: &amp;amp;Kata&#123;&#125;&#125;</span><br><span class="line">    crio_oci.createContainer()</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p>模拟结果如下</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">use containerd as high level runtime</span><br><span class="line">use runc to run container</span><br><span class="line">------------------------</span><br><span class="line">use containerd as high level runtime</span><br><span class="line">use kata to run container</span><br><span class="line">------------------------</span><br><span class="line">use CRI-O as high level runtime</span><br><span class="line">use runc to run container</span><br><span class="line">------------------------</span><br><span class="line">use CRI-O as high level runtime</span><br><span class="line">use kata to run container</span><br></pre></td></tr></table></figure>
 
-<p>最后，我们可以看到大厂博弈后的结果，都是!!#ff0000 定义CRI接口，定义OCI规范!!，开放的接口和规范意味着可以其实现可以任意组合，而不会绑定到某一种实现上。在深层次上似乎也是一种哲学，一种可以借鉴的设计模式吧。</p>
-<h2 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://fuckcloudnative.io/posts/container-runtime/">Kubernetes 中的容器运行时 – 云原生实验室 - Kubernetes|Docker|Istio|Envoy|Hugo|Golang|云原生</a></li>
-<li><a target="_blank" rel="noopener" href="https://fuckcloudnative.io/posts/cri-o/">CRI-O 简介 – 云原生实验室 - Kubernetes|Docker|Istio|Envoy|Hugo|Golang|云原生</a></li>
-<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/GHjvvTJ8ZerIyCqXB1BSUQ">K8s宣布弃用Docker，千万别慌！</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.tutorialworks.com/difference-docker-containerd-runc-crio-oci/#:~:text=runc%20provides%20all%20of%20the,create%20and%20run%20container%20processes">https://www.tutorialworks.com/difference-docker-containerd-runc-crio-oci/#:~:text=runc%20provides%20all%20of%20the,create%20and%20run%20container%20processes</a>.</li>
-<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/charlieroro/articles/10998203.html">K8S Runtime CRI OCI contained dockershim 理解（转） - charlieroro - 博客园</a></li>
-<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/overview/components/">Kubernetes Components | Kubernetes</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/container-runtimes-part-1-introduction-container-r">Container Runtimes Part 1: An Introduction to Container Runtimes - Ian Lewis</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/container-runtimes-part-2-anatomy-low-level-contai">Container Runtimes Part 2: Anatomy of a Low-Level Container Runtime - Ian Lewis</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.ianlewis.org/en/container-runtimes-part-3-high-level-runtimes">Container Runtimes Part 3: High-Level Runtimes - Ian Lewis</a></li>
-</ul>
+    
 
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/" class="post-title-link" itemprop="url">手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-04-10 00:00:00" itemprop="dateCreated datePublished" datetime="2023-04-10T00:00:00+08:00">2023-04-10</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>授之以鱼，不如授之以渔，关于k8s源码的分析，网上的文章太多了，而且随着chatGPT的出现，通过GPT来学习k8s也越来越方便(不过要注意GPT有的时候会认真的胡说八道)，但是往往要真的深入理解k8s还是要自己去读源码，最好的方法就是带着问题去找对应的源码。这篇文章也是系列文章的第一篇。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/" class="post-title-link" itemprop="url">手把手DEBUG(第二篇：从一个到达APIServer的请求开始)</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-05-11 00:00:00" itemprop="dateCreated datePublished" datetime="2023-05-11T00:00:00+08:00">2023-05-11</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>我在首次接触k8s最头疼的问题是，面对上百万行错综复杂的代码，到底应该如何抓住"主次"，从哪一个文件看起。很多源码分析的教程更多的是从cmd/kube-apiserver开始，诚然这是一个从零开始debug的手段，但是debug一会儿就会陷入非常深的调用链的细节，导致整个过程痛苦不堪，这里我想从一个pod从请求到创建再到整个生命周期角度，以方式聊聊源码，这种方法会让阅读变得更加简单。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%8C%E7%AF%87%EF%BC%9A%E4%BB%8E%E4%B8%80%E4%B8%AA%E5%88%B0%E8%BE%BEAPIServer%E7%9A%84%E8%AF%B7%E6%B1%82%E5%BC%80%E5%A7%8B/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/" class="post-title-link" itemprop="url">手把手DEBUG(第三篇:pod怎么被调度到一个node上)</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-05-23 16:42:51" itemprop="dateCreated datePublished" datetime="2023-05-23T16:42:51+08:00">2023-05-23</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>6 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>本文围绕k8s中kube-scheduler这个组件，详细说明我是怎么来学习和理解k8s中关于pod的调度逻辑的。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+              <span class="post-sticky-flag" title="Sticky">
+                <i class="fa fa-thumbtack"></i>
+              </span><a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/" class="post-title-link" itemprop="url">手把手DEBUG(第四篇：被调度到node上的pod怎么启动的)</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-18 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-18T00:00:00+08:00">2023-08-18</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>10 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>本文围绕k8s中kubelet这个组件，展开说说我是怎么来学习和理解k8s中关于kubelet如何管理pod这部分内容的</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/" class="post-title-link" itemprop="url">手把手DEBUG-第五篇-controller的精妙设计</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-19 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-19T00:00:00+08:00">2023-08-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>5.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>22 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>本文围绕k8s中controller这个抽象的组件，来聊聊我是怎么来学习和理解这个非常关键的，并且由多个组件共同构成的控制k8s核心API逻辑的。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/" class="post-title-link" itemprop="url">当对服务接口压测的时候,我们到底在压什么</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-07-05 00:00:00" itemprop="dateCreated datePublished" datetime="2022-07-05T00:00:00+08:00">2022-07-05</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/pytorch%E8%AE%AD%E7%BB%83%E7%A8%8B%E5%BA%8F%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%A1%E4%B8%BB%E4%BA%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/pytorch%E8%AE%AD%E7%BB%83%E7%A8%8B%E5%BA%8F%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%A1%E4%B8%BB%E4%BA%86/" class="post-title-link" itemprop="url">Pytorch训练程序为什么卡主了</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2021-10-19 16:48:27" itemprop="dateCreated datePublished" datetime="2021-10-19T16:48:27+08:00">2021-10-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>4 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>对于单机多卡任务，有的时候会遇到训练程序卡主不动，卡在某一个epoch无法完成，这个时候现象可能是GPU已用显存非0，但是GPU整体利用率为0。这里总结了一下：通过gdb方式定位，训练代码卡在了程序的哪个位置，方便更好的定位问题。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pytorch%E8%AE%AD%E7%BB%83%E7%A8%8B%E5%BA%8F%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%A1%E4%B8%BB%E4%BA%86/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/" class="post-title-link" itemprop="url">如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-02-19 00:00:00" itemprop="dateCreated datePublished" datetime="2020-02-19T00:00:00+08:00">2020-02-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>7 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的周期任务发生器，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是任务的生产者。例如我们当前的应用每天就会产生15万以上的周期任务，但是与之相伴随的就是一个非常重要的问题，原生Beat在Celery中是一个单点进程，不具备容错能力。所以如何让周期任务发生器变得具有容错性(Fault-tolerant)——即周期任务产生器进程Beat挂掉后(或者机器宕机)快速恢复进程，是必须要考虑的问题。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%BD%93%E5%B9%B6%E5%8F%91insert-on-duplicate-key-update%E9%81%87%E8%A7%81%E6%AD%BB%E9%94%81-%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E5%BD%93%E5%B9%B6%E5%8F%91insert-on-duplicate-key-update%E9%81%87%E8%A7%81%E6%AD%BB%E9%94%81-%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1/" class="post-title-link" itemprop="url">当并发insert on duplicate key update遇见死锁--更新丢失</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-01-15 00:00:00" itemprop="dateCreated datePublished" datetime="2020-01-15T00:00:00+08:00">2020-01-15</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>6.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>22 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>数据库死锁问题，是一个老生常谈且很常见的问题，网上也有非常多对于各类死锁场景的解析和复现，但凡和死锁有关，无外乎不涉及数据库隔离等级、索引、以及innodb锁等相关原因。但是我这个案例我搜遍了全网没能找到比较相似情况。于是我想尽可能的复现出这种情况，找出死锁的原因，找出可能出现的隐患。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E5%BD%93%E5%B9%B6%E5%8F%91insert-on-duplicate-key-update%E9%81%87%E8%A7%81%E6%AD%BB%E9%94%81-%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E8%BF%99%E4%B8%AA%E6%83%85%E4%BA%BA%E8%8A%82%EF%BC%8C%E5%9C%A8%E4%BA%91%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E8%AF%95%E7%9D%80%E8%A1%A8%E8%BE%BE%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E7%88%B1%E6%84%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E8%BF%99%E4%B8%AA%E6%83%85%E4%BA%BA%E8%8A%82%EF%BC%8C%E5%9C%A8%E4%BA%91%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E8%AF%95%E7%9D%80%E8%A1%A8%E8%BE%BE%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E7%88%B1%E6%84%8F/" class="post-title-link" itemprop="url">这个情人节，在云服务器上试着表达不一样的爱意</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2019-02-15 00:00:00" itemprop="dateCreated datePublished" datetime="2019-02-15T00:00:00+08:00">2019-02-15</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.4k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>13 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>年轻的时候谈的恋爱就像TCP链接，恋爱时三次握手即可，可分手时却分了四次。而常常久久的爱情，更像是icmp协议，无论对方身在何处，无论是否是可靠连接，无论你何时去ping她/他，她/他都默默地响应你。这篇文章就是说说，如何在内核中增加几行代码，让你的女神/男神当ping你(的服务器)的时候，来传达表达你的爱。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E8%BF%99%E4%B8%AA%E6%83%85%E4%BA%BA%E8%8A%82%EF%BC%8C%E5%9C%A8%E4%BA%91%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E8%AF%95%E7%9D%80%E8%A1%A8%E8%BE%BE%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84%E7%88%B1%E6%84%8F/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%88%A9%E7%94%A8packer%E5%92%8Cterraform%EF%BC%8C%E4%B8%80%E9%94%AE%E5%88%9B%E5%BB%BA%E5%8D%B3%E6%8B%BF%E5%8D%B3%E7%94%A8%E7%9A%84%E8%BF%B7%E4%BD%A0%E5%B9%B6%E8%A1%8C%E8%AE%A1%E7%AE%97%E9%9B%86%E7%BE%A4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/%E5%88%A9%E7%94%A8packer%E5%92%8Cterraform%EF%BC%8C%E4%B8%80%E9%94%AE%E5%88%9B%E5%BB%BA%E5%8D%B3%E6%8B%BF%E5%8D%B3%E7%94%A8%E7%9A%84%E8%BF%B7%E4%BD%A0%E5%B9%B6%E8%A1%8C%E8%AE%A1%E7%AE%97%E9%9B%86%E7%BE%A4/" class="post-title-link" itemprop="url">利用Packer和Terraform，一键创建即拿即用的迷你并行计算集群</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2018-11-19 00:00:00" itemprop="dateCreated datePublished" datetime="2018-11-19T00:00:00+08:00">2018-11-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.8k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>17 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>俗话说的话，没有完整使用过ECS产品的程序员不是好的程序员（好吧，其实是我说的）。当然，控制台操作或者用OpenAPI也没有必要去写一篇文章，所以那就来点儿有意思的。我们来说说，怎么用Packer和Terraform，这两个开源基础架构自动化编排工具,来快速搭建一个即拿即用的迷你并行计算集群（当然，这里的并行计算集群的网络知识普通的以太网互联啦）</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/%E5%88%A9%E7%94%A8packer%E5%92%8Cterraform%EF%BC%8C%E4%B8%80%E9%94%AE%E5%88%9B%E5%BB%BA%E5%8D%B3%E6%8B%BF%E5%8D%B3%E7%94%A8%E7%9A%84%E8%BF%B7%E4%BD%A0%E5%B9%B6%E8%A1%8C%E8%AE%A1%E7%AE%97%E9%9B%86%E7%BE%A4/">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1188,13 +1374,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="Word count total">16k</span>
+    <span title="Word count total">45k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="Reading time total">58 mins.</span>
+    <span title="Reading time total">2:44</span>
   </span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>

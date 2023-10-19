@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的周期任务发生器，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是任务的生产者。例如我们当前的应用每天就会产生15">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的周期任务发生器，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是任务的生产者。例如我们当前的应用每天就会产生15">
+<meta property="og:locale">
+<meta property="og:image" content="https://ata2-img.cn-hangzhou.oss-pub.aliyun-inc.com/f7c2dcc779e80a106f0f76d486af290b.png">
+<meta property="og:image" content="https://ata2-img.cn-hangzhou.oss-pub.aliyun-inc.com/24d88b8a0f18977d0f7fa459e209a425.png">
+<meta property="article:published_time" content="2020-02-18T16:00:00.000Z">
+<meta property="article:modified_time" content="2023-10-19T09:29:17.108Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="python">
+<meta property="article:tag" content="调度">
+<meta property="article:tag" content="容错">
+<meta property="article:tag" content="celery">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ata2-img.cn-hangzhou.oss-pub.aliyun-inc.com/f7c2dcc779e80a106f0f76d486af290b.png">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/","path":"如何使用redis让周期异步任务变得fault-tolerant且dynamic/","title":"如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text">一、原生Celery4.x Beat是如何产生周期任务的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text">二、Redbeat如何重载原生Scheduler？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-text">三、总结：</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link"><span class="nav-text">参考文章源码：</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8redis%E8%AE%A9%E5%91%A8%E6%9C%9F%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%8F%98%E5%BE%97fault-tolerant%E4%B8%94dynamic/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic | xiaobaidemu">
+      <meta itemprop="description" content="Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的周期任务发生器，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是任务的生产者。例如我们当前的应用每天就会产生15万以上的周期任务，但是与之相伴随的就是一个非常重要的问题，原生Beat在Celery中是一个单点进程，不具备容错能力。所以如何让周期任务发生器变得具有容错性(Fault-tolerant)——即周期任务产生器进程Beat挂掉后(或者机器宕机)快速恢复进程，是必须要考虑的问题。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          如何使用Redis让周期异步任务变得Fault-tolerant且Dynamic
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2020-02-19 00:00:00" itemprop="dateCreated datePublished" datetime="2020-02-19T00:00:00+08:00">2020-02-19</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>7 mins.</span>
+    </span>
+</div>
+
+            <div class="post-description">Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的周期任务发生器，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是任务的生产者。例如我们当前的应用每天就会产生15万以上的周期任务，但是与之相伴随的就是一个非常重要的问题，原生Beat在Celery中是一个单点进程，不具备容错能力。所以如何让周期任务发生器变得具有容错性(Fault-tolerant)——即周期任务产生器进程Beat挂掉后(或者机器宕机)快速恢复进程，是必须要考虑的问题。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>        Python技术栈的同学一定都非常了解Celery——基于消息队列的分布式任务调度系统。(具体用法介绍不在此赘述)。通过Celery可以快速高效的将大规模的任务实时分发到众多的不同的机器上，让用户只关注每个单独任务的处理，而非调度分配任务本身。另外，Celery中有一个非常好用的<em><span style="color: #ff6600;">周期任务发生器Beat</span></em>，通过此进程可以帮助我们快速开发出大规模的周期任务，也就是<span style="color: #ff6600;"><em>任务的生产者</em></span>。例如我们当前的应用每天就会产生15万以上的周期任务，但是与之相伴随的就是一个非常重要的问题，原生Beat在Celery中是一个单点进程，不具备容错能力。所以如何让周期任务发生器变得具有<span style="color: #ff6600;">容错性(Fault-tolerant)</span>——即周期任务产生器进程Beat挂掉后(或者机器宕机)快速恢复进程，是必须要考虑的问题。Celery在某种程度上是具有容错性的，但高可用性也是由条件的：需要保证所使用的<span style="color: #ff6600;">消息中间件的高可用性</span>，并且只保证消息存储和消费过程的容错性。而另一个问题就是原生Beat不支持<span style="color: #ff6600;">动态添加/删除/修改(Dynamic)</span>周期任务的方法，当应用的周期任务越来越多，不能因为新增一个任务而重启整个Beat进程，导致其他任务周期产生影响。</p>
+<p>        当然，开源对于这两类问题，已经有很多成熟的解决方法，往往大家都殊途同归，借助消息中间件的高可用性，来进行故障转移。这里我也是站在别人的肩上，看看<a target="_blank" rel="noopener" href="https://github.com/sibson/redbeat">redbeat</a>如何借助Redis来做到周期任务的高可用性（Fault-tolerant），以及周期任务的弹性动态变化能力（Resilient）。</p>
+<h3>一、原生Celery4.x Beat是如何产生周期任务的？</h3>
+<p>        Celery4.x中默认使用的是PersistentScheduler作为默认调度器的持久化方式，即使用<span style="color: #ff0000;">写文件的方式（序列化）</span>记录所有周期任务的最后执行时间last_run_at以及周期调度的频率(interval/crontab)，Celery<span style="color: #ff0000;">支持用户自己实现持久化的方式</span>如将每次调度任务的时间信息，记录在mysql数据库，redis/mongodb等。用户可以通过重载PersistentScheduler，自己实现存储调度任务的信息的方式。如对于<span style="color: #ff0000;">django用户可以使用django-celery-beat</span>实现通过控制台进行动态的<span style="color: #ff0000;">创建，编辑，删除周期性任务</span>。但django-celery-beat暂不确定是否可以保证容错性的beat(即允许多个beat进程同时调度)。不过，我们可以确定，要实现Beat的Fault-tolerant&Dynamic，必须要将待调度的周期性任务的相关信息，存储到某种类型的后端数据库，无论是mysql还是nosql的redis等。</p>
+<p>        下面我们用一张图来说明整个原生Beat的调度方式</p>
+<p><img src="https://ata2-img.cn-hangzhou.oss-pub.aliyun-inc.com/f7c2dcc779e80a106f0f76d486af290b.png" alt=""></p>
+<p>        由上图可以了解到，Celery4.x中使用了最小堆的方式来计算下一次需要触发调度的周期性任务(Celery3.x并未使用此数据结构)。同时会在<span style="color: #ff0000;">内存</span>和<span style="color: #ff0000;">后端存储（数据库/文件）</span>中记录每个任务最后一次的调度时间。但是从原生Beat中也可以看出，只有当重启beat进程时才能对周期性任务进行<span style="color: #ff0000;">增删改<span style="color: #000000;">操作，并无法进行动态修改，并且不支持容错行为。</span></span></p>
+<h3>二、Redbeat如何重载原生Scheduler？</h3>
+<p>        使beat做到Fault-tolerant特性，重要的一点是有多节点的beat进程冗余。而要想动态的增加/删出/改变周期性任务，则需将每个任务的调度相关信息，存储在某一中心化存储中，如mysql/redis。将调度信息在后端进行存储也进一步保证了beat调度的任务准确性和唯一性。 在实现上需要做到以下五点。</p>
+<ul>
+<li>重载Scheduler：初始化加载以及更新所有的周期性任务，将所有周期性任务的定时信息，参数等防止到redis中存储。</li>
+<li>重载ScheduleEntry: 每一个周期性任务对应一个entry，记录任务的调度周期，参数以及最近最后一次调度时间，并序列化至redis，用key-value方式记录这些信息。</li>
+<li>使用redis中的Sorted Set数据结构存储每个任务下一次调度的时间，代替最小堆。</li>
+<li>需要保证所有的任务的定时信息如interval/crontab等参数，均获取自redis/任何中心化存储(如diamond)，保证任务调度信息可以动态变化</li>
+<li><span style="color: #3366ff;">利用简易的redis分布式锁实现Fault-tolerant，同时保证一个时刻只能有一个beat进程真实进行调度</span></li>
+</ul>
+<p>      下图简单的表达整个Redbeat的调度流程。</p>
+<p><img src="https://ata2-img.cn-hangzhou.oss-pub.aliyun-inc.com/24d88b8a0f18977d0f7fa459e209a425.png" alt=""></p>
+<p>        可以看到beat进程的执行中，通过分布式锁保证同一时刻仅有一个beat进程进行调度，其他进程均会被阻塞，<span style="background-color: #ffffff; color: #3366ff;">直到调度进程挂掉，超时后释放锁<span style="color: #000000;">。另外通过redis中Sorted Set数据结构模拟原生beat中的最小堆判断本次应该调度的任务。整个过程相对精简直观。</span></span></p>
+<p><span style="background-color: #ffffff; color: #3366ff;"><span style="color: #000000;">        对于动态改变Beat中周期任务的行为，可以分为新增/删除/修改定期任务执行周期三种。</span></span></p>
+<ul>
+<li>新增任务：1. 将新增任务名插入至statics中，2.并且任务定义调度等信息放入对应任务名的hash对象中。3.同时把任务及对应的当前时间插入至schedule的Redis对象中，触发下一轮调度。</li>
+<li>删除任务：1. 把任务相关定义调度信息所对应的hash对象删除，从而使下一轮调度时无法获取对应信息，进而调度失败。2. 删除statics中改任务对应的名称</li>
+<li>修改定期任务执行的周期：直接修改任务名在redis中对应的hash对象内的调度信息即可</li>
+</ul>
+<p>        至此，一个简单的具有容错和动态改变任务调度信息的周期性任务即完成。</p>
+<h3>三、总结：</h3>
+<p>      当然此实现也有一些小的缺陷。比如当beat挂掉后，最长的恢复时间取决于redis_lock的超时时间，并且保证高可用性的最为重要的问题，即要保证redis的高可用性。对于这个问题，本人暂未深入研究。 另外对于整个当前Redbeat实现的性能的极限也并没有进行测试，对于我们的应用来说，共有400+的周期性任务，并且平均一天内这些任务一共会执行15万次，此实现对于满足我们的需求已足够。</p>
+<h4>参考文章源码：</h4>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/sibson/redbeat">https://github.com/sibson/redbeat</a> (celery 3.x & celery 4.x)</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/MnogoByte/celery-redundant-scheduler">https://github.com/MnogoByte/celery-redundant-scheduler</a> (celery 3.x)</li>
+<li><a target="_blank" rel="noopener" href="https://redis.io/commands">https://redis.io/commands</a></li>
+<li><a target="_blank" rel="noopener" href="http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html">http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/python/" rel="tag"># python</a>
+              <a href="/tags/%E8%B0%83%E5%BA%A6/" rel="tag"># 调度</a>
+              <a href="/tags/%E5%AE%B9%E9%94%99/" rel="tag"># 容错</a>
+              <a href="/tags/celery/" rel="tag"># celery</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/pytorch%E8%AE%AD%E7%BB%83%E7%A8%8B%E5%BA%8F%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%A1%E4%B8%BB%E4%BA%86/" rel="prev" title="Pytorch训练程序为什么卡主了">
+                  <i class="fa fa-angle-left"></i> Pytorch训练程序为什么卡主了
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/%E5%BD%93%E5%B9%B6%E5%8F%91insert-on-duplicate-key-update%E9%81%87%E8%A7%81%E6%AD%BB%E9%94%81-%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1/" rel="next" title="当并发insert on duplicate key update遇见死锁--更新丢失">
+                  当并发insert on duplicate key update遇见死锁--更新丢失 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">45k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">2:44</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

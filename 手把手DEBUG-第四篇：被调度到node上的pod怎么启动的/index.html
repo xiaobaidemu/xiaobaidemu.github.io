@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="本文围绕k8s中kubelet这个组件，展开说说我是怎么来学习和理解k8s中关于kubelet如何管理pod这部分内容的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="手把手DEBUG(第四篇：被调度到node上的pod怎么启动的)">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="本文围绕k8s中kubelet这个组件，展开说说我是怎么来学习和理解k8s中关于kubelet如何管理pod这部分内容的">
+<meta property="og:locale">
+<meta property="article:published_time" content="2023-08-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2023-10-19T09:35:38.910Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="kubernetes">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/","path":"手把手DEBUG-第四篇：被调度到node上的pod怎么启动的/","title":"手把手DEBUG(第四篇：被调度到node上的pod怎么启动的)"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>手把手DEBUG(第四篇：被调度到node上的pod怎么启动的) | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E7%BC%96%E8%AF%91kubelet%E4%BA%8C%E8%BF%9B%E5%88%B6"><span class="nav-text">1.编译kubelet二进制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%BB%88%E6%AD%A2%E9%BB%98%E8%AE%A4%E7%9A%84kubelet%E8%BF%9B%E7%A8%8B"><span class="nav-text">2.终止默认的kubelet进程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AA%E6%9C%80%E5%9F%BA%E6%9C%AC%E7%9A%84pod"><span class="nav-text">3.创建一个最基本的pod</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E9%80%9A%E8%BF%87vscode%E5%BC%80%E5%A7%8B%E5%AF%B9kubelet%E8%BF%9B%E8%A1%8Cdebug"><span class="nav-text">4.通过vscode开始对kubelet进行debug</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E5%9B%9B%E7%AF%87%EF%BC%9A%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0node%E4%B8%8A%E7%9A%84pod%E6%80%8E%E4%B9%88%E5%90%AF%E5%8A%A8%E7%9A%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="手把手DEBUG(第四篇：被调度到node上的pod怎么启动的) | xiaobaidemu">
+      <meta itemprop="description" content="本文围绕k8s中kubelet这个组件，展开说说我是怎么来学习和理解k8s中关于kubelet如何管理pod这部分内容的">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          手把手DEBUG(第四篇：被调度到node上的pod怎么启动的)
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-18 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-18T00:00:00+08:00">2023-08-18</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>10 mins.</span>
+    </span>
+</div>
+
+            <div class="post-description">本文围绕k8s中kubelet这个组件，展开说说我是怎么来学习和理解k8s中关于kubelet如何管理pod这部分内容的</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>更详细的debug操作可以参考我的<a href="%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83">手把手一起DEBUG-Kubernetes-第一篇-建立k8s的DEBUG环境</a></p>
+<h2 id="1-编译kubelet二进制"><a href="#1-编译kubelet二进制" class="headerlink" title="1.编译kubelet二进制"></a>1.编译kubelet二进制</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make all WHAT=cmd/kubelet DBG=1</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-终止默认的kubelet进程"><a href="#2-终止默认的kubelet进程" class="headerlink" title="2.终止默认的kubelet进程"></a>2.终止默认的kubelet进程</h2><p>&emsp;&emsp;kubelet不同于kube-apiserver以及kube-scheduler，kubelet 进程是由操作系统的启动流程或者系统初始化过程中的 systemd 工具来启动的，并作为一个系统级别的服务。所以需要使用systemctl停止。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop kubelet</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;注意需要将所有的nodes节点的kubelet停止，否则如果某一个节点的kubelet没有停止, 则创建的pod后，就会被立刻调度到这个没有停止的节点上，导致无法进入断点。停止节点上的kubelet后，可以查看nodes节点状态均处于NotReady状态。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"> % kubectl get nodes</span><br><span class="line">NAME                STATUS     ROLES           AGE    VERSION</span><br><span class="line">vm-231-177-centos   NotReady   control-plane   160d   v1.25.3</span><br><span class="line">vm-244-254-centos   NotReady   &lt;none&gt;          159d   v1.25.3</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-创建一个最基本的pod"><a href="#3-创建一个最基本的pod" class="headerlink" title="3.创建一个最基本的pod"></a>3.创建一个最基本的pod</h2><p>&emsp;&emsp;在创建pods前，需要注意的是，由于目前k8s节点上的kubelet均因为我们要进行debug，所以都终止了。这个时候上述的节点可能会被k8s打上两个污点Taint 如下</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Taints:</span>             <span class="string">node.kubernetes.io/unreachable:NoExecute</span></span><br><span class="line">                    <span class="string">node.kubernetes.io/unreachable:NoSchedule</span></span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;其中第二个污点的与pod是否可以被调度到该node相关，所以在创建pod前，我们可以在pod的spec中增加tolerations，来表示同意scheduler将该pod调度到此存在”node.kubernetes.io&#x2F;unreachable:NoSchedule”这个污点的节点上。另外为了保证pod一定被调度到我们启动debug的节点上，可以在对应的节点上增加label，并通过设置nodeSelector保证pod被调度到待debug的节点，这里我们将debug所需的节点增加了一个label</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl label nodes &lt;debug_node&gt; node-restriction.kubernetes.io/resource=gpu</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;然后我们在pod对应的yaml中的spec中设定nodeSelector以及tolerations, 然后执行 kubectl apply -f 创建pod</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="string">...</span></span><br><span class="line">  <span class="attr">nodeSelector:</span></span><br><span class="line">    <span class="attr">node-restriction.kubernetes.io/resource:</span> <span class="string">gpu</span></span><br><span class="line">  <span class="attr">tolerations:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">key:</span> <span class="string">node.kubernetes.io/unreachable</span></span><br><span class="line">      <span class="attr">operator:</span> <span class="string">Exists</span></span><br><span class="line">      <span class="attr">effect:</span> <span class="string">NoSchedule</span></span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;注意由于我们已经将kubelet对应的进程移除，所以创建的pod的状态始终是如下处于Pending状态，并且根据<a href="./%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A">手把手DEBUG-第三篇-pod怎么被调度到一个node上</a>可以猜到，其Status.Conditions为已经处于PodScheduled完成状态(pod已经被成功分配到了我们debug进程等待启动的节点上)，如下</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Conditions:</span></span><br><span class="line">  <span class="string">Type</span>           <span class="string">Status</span></span><br><span class="line">  <span class="string">PodScheduled</span>   <span class="literal">True</span> </span><br><span class="line"><span class="string">...</span></span><br><span class="line"><span class="attr">Events:</span></span><br><span class="line">  <span class="string">Type</span>    <span class="string">Reason</span>     <span class="string">Age</span>    <span class="string">From</span>               <span class="string">Message</span></span><br><span class="line">  <span class="string">----</span>    <span class="string">------</span>     <span class="string">----</span>   <span class="string">----</span>               <span class="string">-------</span></span><br><span class="line">  <span class="string">Normal</span>  <span class="string">Scheduled</span>  <span class="string">9m22s</span>  <span class="string">default-scheduler</span>  <span class="string">Successfully</span> <span class="string">assigned</span> <span class="string">default/myapp-centos</span> <span class="string">to</span> <span class="string">vm-244-254-centos</span></span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;而正常情况下，如果Pod被kubelet创建的话，其Status.Conditions应该为</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Conditions:</span></span><br><span class="line">  <span class="string">Type</span>            <span class="string">Status</span></span><br><span class="line">  <span class="string">Initialized</span>     <span class="literal">True</span></span><br><span class="line">  <span class="string">Ready</span>           <span class="literal">True</span></span><br><span class="line">  <span class="string">ContainersReady</span> <span class="literal">True</span></span><br><span class="line">  <span class="string">PodScheduled</span>    <span class="literal">True</span> </span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;大概可以猜测，在PodScheduled执行完成后，其Conditions会依次经历PodScheduled&#x2F;ContainerReady&#x2F;Ready，同时创建Spec中要求的所有容器，等待容器启动，然后最终变成Initialized，下面我们可以通过debug逐渐佐证我们的猜想。</p>
+<h2 id="4-通过vscode开始对kubelet进行debug"><a href="#4-通过vscode开始对kubelet进行debug" class="headerlink" title="4.通过vscode开始对kubelet进行debug"></a>4.通过vscode开始对kubelet进行debug</h2><p>&emsp;&emsp;kubelet要想处理被调度的pods，我们可以猜想一定是其接收到了某一个对pod的修改信息，然后通过不断地循环loop reconcile调谐维护容器生命周期，例如Pod状态同步（监听容器状态，并根据需要采取相应的措施例如启动停止重启来维护容器健康）来逐步逼近最终的pod状态。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>cmd&#x2F;kubelet&#x2F;app&#x2F;server.go</td>
+<td>func RunKubelet(kubeServer <em>options.KubeletServer, kubeDeps</em>kubelet.Dependencies, runOnce bool)</td>
+<td>如其名RunKubelet，开始启动kubelet</td>
+</tr>
+<tr>
+<td>2</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func NewMainKubelet(…)</td>
+<td>一个非常大的函数，主要是根据kubelet所需要的依赖实例化kubelet对象，这里有一个非常重要的对象PodConfig，此对象中的updates属性是一个channel，会监听apiserver中与当前Node绑定(spec.nodeName&#x3D;当前nodehostname）的所有pods变化</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<p>当我们运行启动了kubelet后，我们可以将断点打在这个下面函数所在位置，这样我们按照章节3创建完pod后，由于通过ListWatch会监听与当前Node绑定的所有pods，则当有新的pod被调度到当前的Node,则就会收到所有</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>3</td>
+<td>pkg&#x2F;kubelet&#x2F;config&#x2F;apiserver.go</td>
+<td>func NewSourceApiserver(c clientset.Interface, nodeName types.NodeName, nodeHasSynced func() bool, updates chan&lt;- interface{})</td>
+<td>此函数就是2中提到的专门监听在当前node上有pod变化的协程，可以查看k8s.io&#x2F;client-go&#x2F;tools&#x2F;cache&#x2F;reflector.go中ListAndWatch具体梳理是如何感知到有pods变化的（这部分由于比较复杂不在这里参数）</td>
+</tr>
+<tr>
+<td>4</td>
+<td>pkg&#x2F;kubelet&#x2F;config&#x2F;apiserver.go</td>
+<td>func newSourceApiserverFromLW(lw cache.ListerWatcher, updates chan&lt;- interface{})</td>
+<td>这里再接收到变化是，会将信息通过channel写入updates对象中，通过channel传递pods的变化，我们可以将断点端在匿名函数此函数内部send函数中，监听写入channel的过程</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">send := <span class="function"><span class="keyword">func</span><span class="params">(objs []<span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">    <span class="keyword">var</span> pods []*v1.Pod</span><br><span class="line">    <span class="keyword">for</span> _, o := <span class="keyword">range</span> objs &#123;</span><br><span class="line">    pods = <span class="built_in">append</span>(pods, o.(*v1.Pod))</span><br><span class="line">    &#125;</span><br><span class="line">    # 可以断点在这里，创建的信号从这里开始</span><br><span class="line">    updates &lt;- kubetypes.PodUpdate&#123;Pods: pods, Op: kubetypes.SET, Source: kubetypes.ApiserverSource&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>5</td>
+<td>pkg&#x2F;kubelet&#x2F;config&#x2F;config.go</td>
+<td>func (s <em>podStorage) merge(source string, change interface{}) (adds, updates, deletes, removes, reconciles</em>kubetypes.PodUpdate)</td>
+<td>从上面第4步监听到的所有pods，会和原来内存中记录的pods做对比，来决定接下来是创建，移除还是做调谐动作</td>
+</tr>
+<tr>
+<td>6</td>
+<td>pkg&#x2F;kubelet&#x2F;config&#x2F;config.go</td>
+<td>updatePodsFunc :&#x3D; func(newPods []*v1.Pod, oldPods, pods map[types.UID]*v1.Pod)</td>
+<td>这是一个内嵌的匿名函数，此函数就是用于将内存中oldPods和上面ListAndWatch接收到的所有newPods对比。 <p> 1.  如果newPods中存在新的pod(这个pod不存在于oldPods中)则加入到addPods列表中，等待创建。</td>
+</tr>
+<tr>
+<td>7</td>
+<td>pkg&#x2F;kubelet&#x2F;config&#x2F;config.go</td>
+<td>func checkAndUpdatePod(existing, ref *v1.Pod) (needUpdate, needReconcile, needGracefulDelete bool)</td>
+<td>2.  (紧跟上面的6)如果newPods中pod已经存在于oldPods中，则需要对比前后的pod状态，决定对这个pod的下一个动作是什么。本质上就是就是通过reflect.DeepEqual对比新旧pod的Spec&#x2F;Label&#x2F;Annotation&#x2F;字段是否有改变。 <p> a. 如果存在变化则将pod加入到updatePods队列中. <p> b. 如果这些字段没有变化，但是pod的状态发生了变化，则表示kubelet需要对此pod进行reconcile调谐操作, 使老的pod状态趋近到新的期望的状态。同理此pod进入到reconcilePods队列.<p> c. 当然如果还新的pod中DeletionTimestamp非nil，表示此pod需要被删除，放入到deletePods队列。<p> 这些需要后续通过不同的处理逻辑pods，最终都通过podStorage中的channel传递到另一个协程进行处理。（podStorage可以认为是存储着当前这个时刻最真实状态的pod的信息，这些信息用来和最新的接收到的pods进行对比，从而进一步更新存储的pod信息）</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func (kl *Kubelet) syncLoopIteration(configCh &lt;-chan kubetypes.PodUpdate, handler SyncHandler…)</td>
+<td>此函数可以说是kubelet的核心，它从不同的channel获取对pod的操作动作然后执行对应逻辑。对于我们这个刚创建的pod，根据上面7中阐述，由于新增了一个pod，则会执行HandlePodAdditons.此函数会将pod加入到PodManager中进行后续管理，并且会执行dispatchWork异步执行创建逻辑，而真正的创建和后续维护工作，则由9中提到的podWorkers来完成</td>
+</tr>
+<tr>
+<td>9</td>
+<td>pkg&#x2F;kubelet&#x2F;pod_workers.go</td>
+<td>func (p *podWorkers) UpdatePod(options UpdatePodOptions)</td>
+<td>对于本次debug流程，最重要的就是通过UpdatePod这个函数执行创建逻辑。对于当前我们debug的位置，我们创建的pod还没有创建，则UpdatePod会将我们的pod加入到podUpdates这个map，<strong>每一个pod都会启动一个managePodLoop这个协程</strong></td>
+</tr>
+<tr>
+<td>10</td>
+<td>pkg&#x2F;kubelet&#x2F;pod_workers.go</td>
+<td>func (p *podWorkers) managePodLoop(podUpdates &lt;-chan podWork)</td>
+<td><strong>每一个pod都会启动一个协程，通过一个与此pod唯一对应的channel和协程进行通信，指导pod的创建&#x2F;声明周期维护&#x2F;终止</strong></td>
+</tr>
+<tr>
+<td>11</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func (kl <em>Kubelet) syncPod(ctx context.Context, updateType kubetypes.SyncPodType, pod, mirrorPod</em>v1.Pod, podStatus *kubecontainer.PodStatus) (isTerminal bool, err error)</td>
+<td>此函数可以认为是创建&#x2F;监控pod等最为核心的函数，此函数是可重入的，这一定非常重要，如果函数执行错误，其可以在下一轮继续执行，以求趋向到期望的状态. 对于我们当前pod正处于待创建的状态，</td>
+</tr>
+<tr>
+<td>12</td>
+<td>pkg&#x2F;kubelet&#x2F;kuberuntime&#x2F;kuberuntim_manager.go</td>
+<td>func (m <em>kubeGenericRuntimeManager) SyncPod(pod</em>v1.Pod, podStatus <em>kubecontainer.PodStatus, pullSecrets []v1.Secret, backOff</em>flowcontrol.Backoff)</td>
+<td>这个函数囊括了创建pod中所有容器的详细流程，其中包括调用func (m *kubeGenericRuntimeManager) startContainer 拉取镜像，创建容器并启动容器 <p> kubelet直接与CRI(container runtime interface)交互完成镜像拉取，容器创建 ,管理存储网络等一些列工作。 <p> 同时会更新对应的event，可以通过kubelet describe pods查看到镜像拉取情况，容器启动情况</td>
+</tr>
+<tr>
+<td>13</td>
+<td>pkg&#x2F;kubelet&#x2F;pod_workers.go</td>
+<td>func (p <em>podWorkers) completeWork(pod</em>v1.Pod, phaseTransition bool, syncErr error)</td>
+<td>每一次执行完一轮(11)中的syncPod操作，上述10中的managePodLoop都会调用13，将此pod重新放入队列中，并且设置60s的时间间隔，60s后会重新执行syncPod。常看容器的状态，是否启动，如果均启动则记录Pod的Status.Condition的变化，然后将Pod从Pending状态变成Running状态。</td>
+</tr>
+</tbody></table>
+<p>&emsp;&emsp;至此，pod终于完成了启动，并且Status变成了Running。Pod的生命终点一定是被销毁，所以我们继续探索如果当执行了kubectl delete pods <pod_name>后，kubelet是如何终止pod然后做相关清理。同样我们将断点打在4中的写入updates这个channel的部分。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">updates &lt;- kubetypes.PodUpdate&#123;Pods: pods, Op: kubetypes.SET, Source: kubetypes.ApiserverSource&#125;</span><br></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;当我们执行delete命令后，就会监听到pod中中DeletionTimestamp和DeletetionGracePeriodSeconds非空，标志着pod终止的开始。同样再次经过步骤5，将最新的pods和存在内存中的pods进行对比，在发现了某一个pods中上述字段从nil变成非空后，就会将DELETE的信息写入到步骤10的podUpdates，步骤10的 managePodLoop 在读取到PodUpdates消息后，就会开始进入到终止pod的流程。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>14</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func (kl <em>Kubelet) syncTerminatingPod(ctx context.Context, pod</em>v1.Pod, podStatus <em>kubecontainer.PodStatus, runningPod</em>kubecontainer.Pod, gracePeriod *int64, podStatusFn func(*v1.PodStatus)) error</td>
+<td>终止各类liveness检测，终止所有pod中的容器</td>
+</tr>
+<tr>
+<td>15</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func (kl <em>Kubelet) killPod(pod</em>v1.Pod, p kubecontainer.Pod, gracePeriodOverride *int64) error</td>
+<td>在终止的时候，会等待DeletetionGracePeriodSeconds秒，尽力删除所有的pod中的容器</td>
+</tr>
+<tr>
+<td>16</td>
+<td>pkg&#x2F;kubelet&#x2F;kubelet.go</td>
+<td>func (kl <em>Kubelet) syncTerminatedPod(ctx context.Context, pod</em>v1.Pod, podStatus *kubecontainer.PodStatus)</td>
+<td>卸载volume等，最终删除pod内存中的信息，以及其在etcd的记录</td>
+</tr>
+</tbody></table>
+<p>&emsp;&emsp;终于一个pod从出生到死亡，所有的逻辑都被我们所debug了一遍。在走读debug kubelet的实现时，由于存在非常多的channel通信和协程，所以要跟踪整个信息的轮转确实需要一些不断的尝试，比如可以使用Expression Debug的方法设置条件断点或者修改源码等方法，例如当pod.ObjectMeta.Name和我们创建 pod的名字相同的时候，可以设置断点</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/kubernetes/" rel="tag"># kubernetes</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%BA%94%E7%AF%87-controller%E7%9A%84%E7%B2%BE%E5%A6%99%E8%AE%BE%E8%AE%A1/" rel="prev" title="手把手DEBUG-第五篇-controller的精妙设计">
+                  <i class="fa fa-angle-left"></i> 手把手DEBUG-第五篇-controller的精妙设计
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8BDEBUG-%E7%AC%AC%E4%B8%89%E7%AF%87-pod%E6%80%8E%E4%B9%88%E8%A2%AB%E8%B0%83%E5%BA%A6%E5%88%B0%E4%B8%80%E4%B8%AAnode%E4%B8%8A/" rel="next" title="手把手DEBUG(第三篇:pod怎么被调度到一个node上)">
+                  手把手DEBUG(第三篇:pod怎么被调度到一个node上) <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">45k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">2:44</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

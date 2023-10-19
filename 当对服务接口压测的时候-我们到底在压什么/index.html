@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha256-CTSx/A06dm1B063156EVh15m6Y67pAjZZaQc89LLSrU=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"xiaobaidemu.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.18.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="当对服务接口压测的时候,我们到底在压什么">
+<meta property="og:url" content="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/index.html">
+<meta property="og:site_name" content="xiaobaidemu">
+<meta property="og:description" content="压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。">
+<meta property="og:locale">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/image1.jpg">
+<meta property="og:image" content="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/image2.jpg">
+<meta property="article:published_time" content="2022-07-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2023-10-19T09:25:13.318Z">
+<meta property="article:author" content="xiaobaidemu">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="稳定性">
+<meta property="article:tag" content="rpc">
+<meta property="article:tag" content="微服务">
+<meta property="article:tag" content="压测">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/image1.jpg">
+
+
+<link rel="canonical" href="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh","comments":true,"permalink":"http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/","path":"当对服务接口压测的时候-我们到底在压什么/","title":"当对服务接口压测的时候,我们到底在压什么"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>当对服务接口压测的时候,我们到底在压什么 | xiaobaidemu</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">xiaobaidemu</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">归档我的五年</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%83%8C%E6%99%AF"><span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%8E%E5%8F%B0%E7%B3%BB%E7%BB%9F%E5%8F%AF%E8%83%BD%E9%81%AD%E9%81%87%E7%9A%84%E5%8E%8B%E5%8A%9B"><span class="nav-text">后台系统可能遭遇的压力</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5%E8%AF%B4%E6%98%8E"><span class="nav-text">概念说明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%8B%E6%B5%8B%E8%BF%87%E7%A8%8B"><span class="nav-text">压测过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E6%A0%B9%E6%8D%AE%E4%B8%BB%E8%B0%83%E9%99%90%E5%AE%9A%E7%9A%84%E8%B6%85%E6%97%B6%E6%97%B6%E9%97%B4%E5%92%8C%E6%9C%9F%E6%9C%9B%E6%9C%80%E4%BD%8EQPS%EF%BC%8C%E9%A2%84%E4%BC%B0%E5%87%BA%E6%96%BD%E5%8E%8B%E6%9C%BA%E7%9A%84%E5%B9%B6%E5%8F%91%E6%95%B0"><span class="nav-text">1. 根据主调限定的超时时间和期望最低QPS，预估出施压机的并发数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E8%AE%BE%E8%AE%A1%E5%8E%8B%E6%B5%8B%E5%AE%9E%E9%AA%8C%E7%BD%91%E6%A0%BC%EF%BC%8C%E6%A0%B9%E6%8D%AE%E5%89%8D%E4%B8%80%E8%BD%AE%E5%8E%8B%E6%B5%8B%E7%BB%93%E6%9E%9C%E8%AE%BE%E8%AE%A1%E4%B8%8B%E4%B8%80%E8%BD%AE%E7%9A%84%E5%8E%8B%E6%B5%8B%E5%8E%8B%E5%8A%9B%EF%BC%8C%E8%AF%95%E6%8E%A2%E5%8E%8B%E6%B5%8B%E6%9C%BA%E6%9E%81%E9%99%90"><span class="nav-text">2. 设计压测实验网格，根据前一轮压测结果设计下一轮的压测压力，试探压测机极限</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%BC%95%E5%85%A5%E6%9B%B4%E5%A4%9A%E6%8C%87%E6%A0%87%EF%BC%8C%E5%88%86%E6%9E%90%E9%95%BF%E5%B0%BE%E8%AF%B7%E6%B1%82"><span class="nav-text">3. 引入更多指标，分析长尾请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E7%9C%9F%E5%AE%9E%E6%A1%88%E4%BE%8B%E4%B8%BE%E4%BE%8B"><span class="nav-text">4. 真实案例举例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">xiaobaidemu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+        <div class="back-to-top animated" role="button" aria-label="Back to top">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh">
+    <link itemprop="mainEntityOfPage" href="http://xiaobaidemu.github.io/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="xiaobaidemu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="xiaobaidemu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="当对服务接口压测的时候,我们到底在压什么 | xiaobaidemu">
+      <meta itemprop="description" content="压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          当对服务接口压测的时候,我们到底在压什么
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-07-05 00:00:00" itemprop="dateCreated datePublished" datetime="2022-07-05T00:00:00+08:00">2022-07-05</time>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
+</div>
+
+            <div class="post-description">压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>压测本质上就是在一个期望的平均响应时间设定内，通过调整并发数，来压出是否系统满足要求的最大期望的QPS, 在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。</p>
+</blockquote>
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>我第一次接触到压测的时候，事实上是完全无概念的，只是先找一款压测工具，顺着压测工具提供的能力，执行几次大请求量的测试，但是怎么设置合理的压测压力，压测后的如何有效分析成功和失败率成因，这些也是完全没有概念的。</p>
+<p>本文主要从过去完成的一次压测经验入手，总结了一下当我之后再次需要压测的时候，如何完成压测设计和压测后分析的方法论。另外，**<font color=#ff0000> 本文不对任何压测工具进行介绍</font>**（因为我本人也并没有对压测工具领域有深入分析）</p>
+<h2 id="后台系统可能遭遇的压力"><a href="#后台系统可能遭遇的压力" class="headerlink" title="后台系统可能遭遇的压力"></a>后台系统可能遭遇的压力</h2><p>简单的说，对于后台服务压力源就是海量请求。这些流量压力最终都会转移到后台的服务使用的数据库缓存服务（cpu&#x2F;内存&#x2F;连接数）,机器硬件资源(cpu&#x2F;内存&#x2F;网络连接数),以及其他下游服务。具体的表现可以是：</p>
+<ol>
+<li>整体表现就是此接口的请求的失败率增加，例如请求大面积超时。</li>
+<li>机器硬件资源使用率达到瓶颈，例如cpu跑满&#x2F;内存不足&#x2F;或者是出现大量tcp time_wait连接导致无法创建新的连接请求。</li>
+<li>数据库或者缓存服务使用率达到瓶颈，cpu达到100%，内存不足，以及已用连接数达到上限。</li>
+<li>其他下游子服务处理能力不足.<br><img src="/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/image1.jpg" alt="enter image description here"></li>
+</ol>
+<h2 id="概念说明"><a href="#概念说明" class="headerlink" title="概念说明"></a>概念说明</h2><p>在开始描述压测过程前，必须要理解一些基本的概念。</p>
+<ul>
+<li><strong><font color=#ff0000> QPS(Queries Per Second)</font></strong>:每秒完成查询&#x2F;请求数；一台服务每秒能够完成响应的次数，换言之就是一个服务器的吞吐量。具体公式如下：<br>$$<br>QPS&#x3D;\frac{总请求数}{总时长}<br>$$</li>
+<li><strong><font color=#ff0000> 并发数</font></strong>:施压机器同时发起的请求的线程数(记为C)。在往传输层的角度看，假如施压方方与被压方通过rpc协议完成请求，且通过tcp协议完成网络传输，那么一个线程可以上对应一个tcp长连接(当然这也取决于主调被调的具体实现)，一个tcp长连接，可以在压测期间完成多次请求发送，即一个线程可以在压测期间完成多次请求。另外需要注意：并发数与压测机的能力强相关，是有上限的，当超过并发数超过上限，则压测结果是不准确的。</li>
+<li><strong><font color=#ff0000>平均响应时间</font></strong>:响应时间是一个请求从发出到处理完成接收到响应的总时间，这里我们记L为平均响应时间。</li>
+<li>上面三者的关系大致如下（设总请求数为n, 压测时长为T）<br>$$<br>\begin{aligned}<br>&amp;QPS&#x3D;\frac{n}{T}&#x3D;\frac{总请求数}{总时长}\<br>&amp;L&#x3D;\frac{C<em>T}{n}&#x3D;\frac{并发数</em>压测时长}{总请求数}<br>\end{aligned}<br>$$</li>
+</ul>
+<h2 id="压测过程"><a href="#压测过程" class="headerlink" title="压测过程"></a>压测过程</h2><p>由上面的三个概念就可以知道，压测本质上就是在一个期望的平均响应时间耗时设定内，通过调整并发数，来压出最大期望可能的QPS上限。</p>
+<p><strong>整体的流程化成对应的流程图为如下所示</strong></p>
+<p><img src="/%E5%BD%93%E5%AF%B9%E6%9C%8D%E5%8A%A1%E6%8E%A5%E5%8F%A3%E5%8E%8B%E6%B5%8B%E7%9A%84%E6%97%B6%E5%80%99-%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E5%9C%A8%E5%8E%8B%E4%BB%80%E4%B9%88/image2.jpg" alt="enter image description here"></p>
+<h3 id="1-根据主调限定的超时时间和期望最低QPS，预估出施压机的并发数"><a href="#1-根据主调限定的超时时间和期望最低QPS，预估出施压机的并发数" class="headerlink" title="1. 根据主调限定的超时时间和期望最低QPS，预估出施压机的并发数"></a>1. 根据主调限定的超时时间和期望最低QPS，预估出施压机的并发数</h3><p>假设上游主调限制的超时时间为MaxL,而期望响应时间为L,即平均响应时间。那么<br>$$<br>\begin{aligned}<br>L&lt;MaxL<br>\end{aligned}<br>$$</p>
+<ul>
+<li>假设上游约束调用下游的超时时间为300ms,那么可以设定被调服务期望的平均响应为250ms(真实可能远小于250ms),以L为250ms作为压测的响应时长基准。</li>
+<li>压测的过程是一个对期望QPS逐步上升的过程。所以需要设置基准QPS，假设这里我们设定基准QPS是每秒成功处理4000请求（注意这个时候，其实我们不知道上游可能的qps可能会有多少）。</li>
+<li>根据250ms的平均响应，可以预估出一个线程或者对于tcp一个连接,1s可以完成4次请求,那么如果一个并发一秒可以处理4次请求，那么如果要成功做到4000qps的系统最低要求，那么根据上面的公式，需要设定的并发数为 0.25s <em>4000个&#x2F;s &#x3D; 1000并发数, 即1000个并发下可以做到满足4000qps的系统要求<br>$$<br>\begin{aligned}<br>基准并发数&#x3D;\frac{L</em>n}{T}&#x3D;L*QPS<br>\end{aligned}<br>$$</li>
+</ul>
+<h3 id="2-设计压测实验网格，根据前一轮压测结果设计下一轮的压测压力，试探压测机极限"><a href="#2-设计压测实验网格，根据前一轮压测结果设计下一轮的压测压力，试探压测机极限" class="headerlink" title="2. 设计压测实验网格，根据前一轮压测结果设计下一轮的压测压力，试探压测机极限"></a>2. 设计压测实验网格，根据前一轮压测结果设计下一轮的压测压力，试探压测机极限</h3><p>实验网格，本质上可以是一个excel表，在每一次压测满足预期的时候，设计下一次压测在更大压力情况下的实验。例如下面的一个表</p>
+<table>
+<thead>
+<tr>
+<th align="center">第x次压测</th>
+<th align="center">期望QPS</th>
+<th align="center">期望平均响应</th>
+<th align="center">并发数（连接数）</th>
+<th align="center">压测时长</th>
+<th align="center">成功率</th>
+<th align="center">实际平均响应</th>
+<th align="center">p90等分位响应耗时</th>
+<th align="center">观察到的现象</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1.(基准实验)</td>
+<td align="center">4000</td>
+<td align="center">250ms</td>
+<td align="center">1000</td>
+<td align="center">5min</td>
+<td align="center">100%</td>
+<td align="center">100ms</td>
+<td align="center">140ms</td>
+<td align="center">存储&#x2F;下游服务&#x2F;机器资源使用表现等</td>
+</tr>
+<tr>
+<td align="center">2.(加压)</td>
+<td align="center">8000</td>
+<td align="center">100ms</td>
+<td align="center">1000</td>
+<td align="center">5min</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td align="center">3.(施压机极限试探)</td>
+<td align="center">8000</td>
+<td align="center">100ms</td>
+<td align="center">3000</td>
+<td align="center">5min</td>
+<td align="center">0.1%</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td align="center">4.(再加压)</td>
+<td align="center">10000</td>
+<td align="center">100ms</td>
+<td align="center">1500</td>
+<td align="center">5min</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td align="center">5.(再加压)</td>
+<td align="center">12000</td>
+<td align="center">100ms</td>
+<td align="center">2000</td>
+<td align="center">5min</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td align="center">x</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+<td align="center">…</td>
+</tr>
+</tbody></table>
+<p>例如上表第一次压测就是根据上一小节预估的的基准QPS进行压测, 当第一次压测成功率符合预期，响应时间小于等于预期的时候，可以根据这一次的压测过程的实际平均响应时间，设计下一次的压测压力。</p>
+<ol>
+<li>实验1中，实际平均响应耗时只有100ms，为期望平均耗时的一半，那么在下一次压测时，可以增大期望QPS数，即在并发数不变的情况下，QPS数翻倍，观察整个压测过程。</li>
+<li><strong><font color=#ff0000> 试探施压机的能力上线</font><strong>：假如第2次实验的压测的成功率和期望响应均通过，可以在第3次实验中，尝试对施压机的并发数进行翻倍。如果在期望qps不变的情况下，并发数翻倍，如果</strong>请求成功率骤减</strong>，或者<strong>响应耗时陡升</strong>，则说明已经超过了施压机的能力上限。</li>
+<li>在确定了施压机的并发上限后，就可以<font color=#ff0000>逐步增大期望qps和期望并发数</font>，来对系统进行后续的压力测试。<br>需要注意的是：只有在一轮实验符合期望后（例如成功率大于99.99%，99分位响应时间低于上游超时时间等）才能设计下一轮的实验压力。如果出现这一轮大量指标不符合预期则需要引入更多观测点，排查原因（关于可能的排查点，可以查看下一章节的案例梳理）</li>
+</ol>
+<h3 id="3-引入更多指标，分析长尾请求"><a href="#3-引入更多指标，分析长尾请求" class="headerlink" title="3. 引入更多指标，分析长尾请求"></a>3. 引入更多指标，分析长尾请求</h3><p>当本次压测，成功率过低，或者请求响应增大,或者耗时在p90&#x2F;p99&#x2F;p999分位过大的时候，就需要立刻分析现象的原因。而分析的原因就需要引入更多的观测和指标。下面列出了一些可能观测点。</p>
+<ul>
+<li>自身服务相关：分析日志是否tcp连接数耗尽例如出现大量time_wait，是否cpu内存等使用率达到上限，再深入内存是否有泄漏或者服务线程协程数过多，gc回收速度等等问题。</li>
+<li>存储服务相关：是否出现了大量慢查询，缓存命中失败等，通过存储服务平台监控确实cpu&#x2F;内存&#x2F;连接数是否达到上限。</li>
+<li>调用下游服务是否达到了最大qps上限等</li>
+<li>施压机创建和施压过程，可能会影响到初始请求以及期望qps</li>
+<li>引入上面更多的指标，可以帮助分析诸如压测起始阶段请求出现小概率失败的原因，或者某一阶段突发的失败率上升的小量失败原因，这些少量失败的请求，可以定义为长尾请求，这一部分的分析其实也是最难得。</li>
+</ul>
+<p>在每次定位到一个问题所在时，本质上也可能引入一个或者几个其他的变量，例如下面案例举例中，引入了DB连接数的多个参数。</p>
+<h3 id="4-真实案例举例"><a href="#4-真实案例举例" class="headerlink" title="4. 真实案例举例"></a>4. 真实案例举例</h3><p>之前碰到过当对服务压测过程中，出现大量cannot assign requested address日志时，这种情况属于比较常见，自己接口服务器的端口耗尽无法与下游服务建立tcp链接导致的。<br>排查的过程主要是以下流程：</p>
+<ol>
+<li><p><strong>引入连接状态指标</strong>：比较常见的无法分配请求地址的原因主要是由于连接TIME_WAIT状态过多导致的，所以需要在压测的过程中，采集TIME_WAIT状态的连接，找出TIME_WAIT过多的连接，都是和哪个ip连接的。例如通过netstat -ant等脚本，可以在服务器上周期性采集与哪些ip的连接出现了过多的TIME_WAIT.(关于TIME_WAIT的出现，大家可以自行搜索理解)</p>
+</li>
+<li><p><strong>定位time_wait ip对应的服务</strong>：通过定位发现，是由于与mysql数据库和redis的连接，均出现了大量的TIME_WAIT.那么可以初步定为到，可能是由于服务与存储服务的连接池不合理的使用导致大量请求失败。</p>
+</li>
+<li><p><strong>研究服务中所使用相关连接池的设置和实现</strong>：服务中mysql使用了go-sql-driver&#x2F;mysql中的连接池，而redis使用了redigo的实现作为连接池，所以分析也就着眼于这两个框架的底层实现。</p>
+</li>
+<li><p><strong>深入源码，最终发现</strong>：</p>
+<ul>
+<li>redis连接池理解偏差: 根因是由于设置了redis连接池参数，max_idle &lt; max_active导致。</li>
+<li>mysql连接池理解偏差：根因是由于mysql连接池参数，max_idle&lt; max_open 导致，和redis连接池理解偏差是一样的。</li>
+<li>而触发的原因，<strong>不是因为压力过大导致，而是由于压力不够</strong>，导致redis和mysql的连接频繁出现回收导致关闭。再深入到源码级别后，就会发现go-sql-driver&#x2F;mysql以及redigo中对于<strong>空闲连接</strong>和<strong>最大空闲连接数</strong>以及<strong>最大空闲时长</strong>的定义本身，我是理解错误的。并非是某一个连接在超过设定的最大空闲时间没有任何数据传递才会被回收，而是根据连接队列或者当前连接整体使用情况综合判定的。</li>
+</ul>
+</li>
+<li><p><strong>最终服务改进方案</strong>：将redigo中max_idle和max_active都设置成相同的，而mysql中max_idle和max_open设置成相同的。这几个参数本质上也变成了，压测实验网格中的自变量，参与到压测实验中。</p>
+</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文根据我自己在实践中对某一个rpc接口做压测的过程的整理，梳理了一套我自己的方法论，的确也有很多不足，但是也希望提供给一些第一次做压测的同学，一些基础的指引。本质上压测过程发现问题，本质上都是一次深入理解系统框架全链路的过程。在正式上线前发现潜在的问题和风险，做到提前预估资源使用，做到当问题来临时可以通过预案化解危机。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/golang/" rel="tag"># golang</a>
+              <a href="/tags/%E7%A8%B3%E5%AE%9A%E6%80%A7/" rel="tag"># 稳定性</a>
+              <a href="/tags/rpc/" rel="tag"># rpc</a>
+              <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/" rel="tag"># 微服务</a>
+              <a href="/tags/%E5%8E%8B%E6%B5%8B/" rel="tag"># 压测</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/%E6%89%8B%E6%8A%8A%E6%89%8B%E4%B8%80%E8%B5%B7DEBUG-Kubernetes-%E7%AC%AC%E4%B8%80%E7%AF%87-%E5%BB%BA%E7%AB%8Bk8s%E7%9A%84DEBUG%E7%8E%AF%E5%A2%83/" rel="prev" title="手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)">
+                  <i class="fa fa-angle-left"></i> 手把手一起DEBUG Kubernetes(第一篇:建立k8s的DEBUG环境)
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/%E4%BB%8Ekubernetes%E4%B8%AD%E5%AE%B9%E5%99%A8%E7%94%9F%E6%80%81%E7%AA%A5%E6%8E%A2%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%93%B2%E5%AD%A6/" rel="next" title="从kubernetes中容器生态窥探设计模式的哲学">
+                  从kubernetes中容器生态窥探设计模式的哲学 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2023</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">xiaobaidemu</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">45k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">2:44</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
